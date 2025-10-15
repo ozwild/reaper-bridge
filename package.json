@@ -1,0 +1,62 @@
+{
+  "name": "@ozwild/reaper-bridge",
+  "version": "0.1.0",
+  "description": "A JavaScript/React bridge for controlling Reaper DAW via Web Control Surface",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./Bridge": "./src/Bridge.js",
+    "./React": "./src/React/useReaper.js",
+    "./React/useReaper": "./src/React/useReaper.js"
+  },
+  "files": [
+    "src/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "reaper",
+    "daw",
+    "music-production",
+    "audio",
+    "bridge",
+    "web-control-surface",
+    "react",
+    "hook"
+  ],
+  "author": "Ozwild",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ozwild/reaper-bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ozwild/reaper-bridge/issues"
+  },
+  "homepage": "https://github.com/ozwild/reaper-bridge#readme",
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "prop-types": "^15.8.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0"
+  },
+  "scripts": {
+    "lint": "eslint src/",
+    "format": "prettier --write \"src/**/*.js\"",
+    "format:check": "prettier --check \"src/**/*.js\""
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
