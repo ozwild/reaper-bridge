@@ -1,7 +1,35 @@
 import { useState, useEffect, useRef } from 'react'
-import PropTypes from 'prop-types'
 
-import Bridge from '../Bridge.js'
+import Bridge, { EventHandlers } from '../Bridge.js'
+
+import type { TransportStateResponse } from '../responseParser.js'
+
+// ============================================================================
+// TypeScript Interfaces
+// ============================================================================
+
+export type UseReaperHookProps = EventHandlers & {
+  // EventHandlers already includes onConnectionChange, onError, onTransport
+}
+
+export interface UseReaperResult {
+  // Bridge API
+  configure: typeof Bridge.configure
+  getDefaultConfig: typeof Bridge.getDefaultConfig
+  init: typeof Bridge.init
+  isReady: typeof Bridge.isReady
+  subscribe: typeof Bridge.subscribe
+  unsubscribe: typeof Bridge.unsubscribe
+  updateSubscriber: typeof Bridge.updateSubscriber
+  requests: typeof Bridge.requests
+  actions: typeof Bridge.actions
+  getInstance: typeof Bridge.getInstance
+
+  // Hook state
+  isConnected: boolean
+  transportState: TransportStateResponse
+  error: string | null
+}
 
 // ============================================================================
 // React Hook
@@ -16,7 +44,7 @@ import Bridge from '../Bridge.js'
  *
  * @example
  * // In your app entry (before React render):
- * import Bridge from './reaper-bridge/Bridge'
+ * import {Bridge} from './reaper-bridge/Bridge'
  * Bridge.configure({ host: 'localhost', port: 8080 })
  * Bridge.init()
  *
@@ -30,18 +58,18 @@ export const useReaper = ({
   onConnectionChange,
   onError,
   onTransport,
-} = {}) => {
-  const [isConnected, setIsConnected] = useState(Bridge.isConnected())
-  const [transportState, setTransportState] = useState({
+}: UseReaperHookProps = {}): UseReaperResult => {
+  const [isConnected, setIsConnected] = useState<boolean>(Bridge.isConnected())
+  const [transportState, setTransportState] = useState<TransportStateResponse>({
     playstate: 0,
-    positionSeconds: '00:00.000',
-    positionBars: '1.1.00',
+    position: { seconds: 0, string: '00:00.00', bars: '1.1.00' },
+    source: [],
     isPlaying: false,
     isRecording: false,
     isLooping: false,
   })
-  const [error, setError] = useState(null)
-  const subscriberIdRef = useRef(null)
+  const [error, setError] = useState<string | null>(null)
+  const subscriberIdRef = useRef<number | null>(null)
 
   // Warn if Bridge not initialized
   useEffect(() => {
@@ -55,8 +83,8 @@ export const useReaper = ({
 
   // Subscribe to Bridge events
   useEffect(() => {
-    const handlers = {
-      onConnectionChange: (connected) => {
+    const handlers: EventHandlers = {
+      onConnectionChange: (connected: boolean) => {
         setIsConnected(connected)
         if (!connected) {
           setError('Disconnected from Reaper')
@@ -68,7 +96,7 @@ export const useReaper = ({
         }
       },
 
-      onError: (err, failureCount) => {
+      onError: (err: Error, failureCount: number) => {
         const instance = Bridge.getInstance()
         if (failureCount >= instance.failureThreshold) {
           setError(`Connection failed: ${err.message}`)
@@ -113,10 +141,4 @@ export const useReaper = ({
     transportState,
     error,
   }
-}
-
-useReaper.propTypes = {
-  onConnectionChange: PropTypes.func,
-  onError: PropTypes.func,
-  onTransport: PropTypes.func,
 }

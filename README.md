@@ -8,7 +8,56 @@
 
 ---
 
-## Overview
+## Import Patterns
+
+The package provides multiple import options for different use cases:
+
+### Main Bundle (Recommended)
+
+```javascript
+// Import everything (Bridge + useReaper)
+import { Bridge, useReaper } from '@ozwild/reaper-bridge'
+
+// Use Bridge for vanilla JS
+Bridge.init({ connection: { host: 'localhost', port: 8080 } })
+
+// Use useReaper hook in React components
+function MyComponent() {
+  const { actions, isConnected } = useReaper()
+  // ...
+}
+```
+
+### Bridge Only (Vanilla JS)
+
+```javascript
+// Import only Bridge (smaller bundle for non-React apps)
+import { Bridge } from '@ozwild/reaper-bridge/Bridge'
+
+Bridge.init(config)
+```
+
+### Legacy Support
+
+```javascript
+// CommonJS (Node.js)
+const { Bridge, useReaper } = require('@ozwild/reaper-bridge')
+
+// ESM with dynamic import
+const { Bridge } = await import('@ozwild/reaper-bridge')
+```
+
+### Bundle Information
+
+- **Main bundle**: `~7.3KB` minified (Bridge + useReaper)
+- **Bridge only**: `~6.3KB` minified (vanilla JS)
+- **Formats**: ESM + CommonJS
+- **Target**: Modern browsers + Node.js 18+
+- **Tree-shakable**: Import only what you need
+
+---
+
+## Architecture Overview
 
 **reaper-bridge** is a JavaScript library that provides a clean, modern API for controlling [Reaper DAW](https://www.reaper.fm/) from web applications. It leverages Reaper's built-in Web Control Surface to enable remote control over HTTP.
 
@@ -35,21 +84,24 @@
 ## Installation
 
 ```bash
-# npm
 npm install @ozwild/reaper-bridge
-
-# yarn
+# or
 yarn add @ozwild/reaper-bridge
-
-# pnpm
-pnpm add @ozwild/reaper-bridge
 ```
 
-### Prerequisites
+### Requirements
 
-- **Node.js** 18+
-- **React** 18+ (if using React hook)
+- **Node.js**: 18.0.0 or higher
+- **React**: 18.0.0 or higher (optional, only needed for `useReaper` hook)
 - **Reaper DAW** with Web Control Surface enabled
+
+### Build Output
+
+The package provides optimized, minified builds:
+- **ESM** (`dist/*.esm.js`) - For modern bundlers (Vite, Webpack 5, Rollup)
+- **CommonJS** (`dist/*.cjs.js`) - For Node.js and older bundlers
+- **Source maps** included for debugging
+- **Tree-shakable** - Import only what you need
 
 ---
 
@@ -67,46 +119,17 @@ pnpm add @ozwild/reaper-bridge
 ### 2. Vanilla JavaScript Usage
 
 ```javascript
-import Bridge from '@ozwild/reaper-bridge'
+import { Bridge } from '@ozwild/reaper-bridge'
 
-// Initialize Bridge (do this once at app startup)
-Bridge.init({
-  connection: {
-    host: 'localhost',
-    port: 8080,
-    pollingInterval: 250,
-    failureThreshold: 3
-  }
-})
-
-// Use actions
-await Bridge.actions.transport.play()
-await Bridge.actions.transport.stop()
-
-// Subscribe to events
-const subscriptionId = Bridge.subscribe({
-  onConnectionChange: (isConnected) => {
-    console.log('Connected:', isConnected)
-  },
-  onTransport: (state) => {
-    console.log('Transport:', state)
-  },
-  onError: (error) => {
-    console.error('Error:', error)
-  }
-})
-
-// Cleanup when done
-Bridge.unsubscribe(subscriptionId)
-```
+const bridge = Bridge.getInstance()
+console.log('Bridge ready:', bridge.isReady())
 
 ### 3. React Usage
 
 ```jsx
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import Bridge from '@ozwild/reaper-bridge'
-import { useReaper } from '@ozwild/reaper-bridge/React'
+import { Bridge, useReaper } from '@ozwild/reaper-bridge'
 
 // Initialize Bridge BEFORE React renders
 Bridge.init({
@@ -177,6 +200,9 @@ Set default configuration before calling `init()`.
 
 ```javascript
 // Set defaults
+import { Bridge } from '@ozwild/reaper-bridge'
+
+// Configure and initialize (do this once in your app)
 Bridge.configure({
   connection: {
     host: '192.168.1.36',
