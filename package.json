@@ -1,27 +1,21 @@
 {
   "name": "@ozwild/reaper-bridge",
   "version": "0.1.0",
-  "description": "A JavaScript/React bridge for controlling Reaper DAW via Web Control Surface",
+  "description": "A JavaScript library for controlling Reaper DAW via Web Control Surface",
   "type": "module",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.esm.js",
       "require": "./dist/index.cjs.js"
     },
     "./Bridge": {
+      "types": "./dist/Bridge.d.ts",
       "import": "./dist/Bridge.esm.js",
       "require": "./dist/Bridge.cjs.js"
-    },
-    "./React": {
-      "import": "./src/React/useReaper.js",
-      "require": "./dist/index.cjs.js"
-    },
-    "./React/useReaper": {
-      "import": "./src/React/useReaper.js",
-      "require": "./dist/index.cjs.js"
     }
   },
   "files": [
@@ -36,8 +30,8 @@
     "audio",
     "bridge",
     "web-control-surface",
-    "react",
-    "hook"
+    "javascript",
+    "typescript"
   ],
   "author": "Ozwild",
   "license": "MIT",
@@ -49,33 +43,18 @@
     "url": "https://github.com/ozwild/reaper-bridge/issues"
   },
   "homepage": "https://github.com/ozwild/reaper-bridge#readme",
-  "peerDependencies": {
-    "react": ">=22.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    }
-  },
-  "dependencies": {
-    "prop-types": "^15.8.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@babel/core": "^7.23.0",
     "@babel/preset-env": "^7.23.0",
-    "@babel/preset-react": "^7.23.0",
     "@babel/preset-typescript": "^7.23.0",
     "@rollup/plugin-babel": "^6.0.4",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.5",
-    "@types/react": "^18.2.0",
     "@typescript-eslint/eslint-plugin": "^8.46.1",
     "@typescript-eslint/parser": "^8.46.1",
     "eslint": "^9.37.0",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.0.0",
-    "eslint-plugin-react-refresh": "^0.4.24",
     "prettier": "^3.6.2",
     "rollup": "^4.7.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",

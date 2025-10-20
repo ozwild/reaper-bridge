@@ -1,5 +1,6 @@
 import Bridge from './Bridge.js'
-import { useReaper } from './React/useReaper.js'
+
+import { withVolume } from './helpers.js'
 
 // Re-export types for consumers
 export type { BridgeConfig, EventHandlers } from './Bridge.js'
@@ -17,7 +18,12 @@ export type {
   ExtStateResponse,
 } from './responseParser.js'
 
-export type { UseReaperHookProps, UseReaperResult } from './React/useReaper.js'
+// Export constants and commands for advanced usage
+export { ACTION_ID, NAMED_ACTION } from './commands.js'
 
-// Named exports only - cleaner for library consumers
-export { Bridge, useReaper }
+// Export the main Bridge class
+export { Bridge }
+
+export const utilities = {
+  withVolume,
+}

@@ -331,19 +331,18 @@ export function parseExtStateResponse(
     throw new ReaperBridgeError(`Invalid command for ExtState: ${command}`)
   }
 
-  if (params.length < 3) {
+  if (params.length < 2) {
     throw new ReaperBridgeError(
-      `Invalid parameters for ExtState: ${params.join(', ')}`
+      `Invalid response parameters for ExtState: ${params.join(', ')}`
     )
   }
 
-  const [namespace, key, value] = params
+  const [namespace, key, value = null] = params
 
-  // Decode special characters (\n, \t, \\)
+  // Decode special characters (\n, \t, \\) if value exists
   const decodedValue = value
-    .replace(/\\n/g, '\n')
-    .replace(/\\t/g, '\t')
-    .replace(/\\\\/g, '\\')
+    ? value.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\\\/g, '\\')
+    : null
 
   return {
     namespace,

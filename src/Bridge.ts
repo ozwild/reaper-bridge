@@ -228,7 +228,7 @@ const Bridge = {
     },
 
     /**
-     * Execute a named action by string
+     * Execute a Reaper action by name
      * Most common actions are available in the NAMED_ACTION enum
      */
     namedAction(action: string): Promise<ParsedResponse | null> {
@@ -322,17 +322,27 @@ const Bridge = {
         if (response === null) return null
         return parseTrackResponse(response)
       },
+
+      async toggleMute(trackNumber: number): Promise<void> {
+        const reaper = getInstance()
+        await reaper.namedAction(NAMED_ACTION.TRACK_TOGGLE_MUTE(trackNumber))
+      },
+
+      async toggleSolo(trackNumber: number): Promise<void> {
+        const reaper = getInstance()
+        await reaper.namedAction(NAMED_ACTION.TRACK_TOGGLE_SOLO(trackNumber))
+      },
     },
 
     project: {
-      load(filename: string): Promise<void> {
+      async load(filename: string): Promise<void> {
         const reaper = getInstance()
         // const argument = `open_project|${encodeURIComponent(filename)}`
-        // @TODO: make OSC address customizable
+        // @TODO: make OSC address customizable, default to reaper-bridge
         const address = 'osworks'
         // @todo: make sure that filename is properly encoded by the underlying command method
         const argument = `open_project|${filename}`
-        return reaper.triggerOSC(address, argument, true)
+        await reaper.triggerOSC(address, argument, true)
       },
     },
 

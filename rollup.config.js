@@ -6,7 +6,7 @@ import peerDepsExternal from 'rollup-plugin-peer-deps-external'
 
 const createConfig = (input, outputName, external = []) => ({
   input,
-  external: ['react', 'prop-types', ...external],
+  external: [...external],
   output: [
     {
       file: `dist/${outputName}.esm.js`,
@@ -34,7 +34,7 @@ const createConfig = (input, outputName, external = []) => ({
     babel({
       babelHelpers: 'bundled',
       exclude: 'node_modules/**',
-      extensions: ['.js', '.jsx', '.ts', '.tsx'],
+      extensions: ['.js', '.ts'],
       presets: [
         [
           '@babel/preset-env',
@@ -47,12 +47,7 @@ const createConfig = (input, outputName, external = []) => ({
             modules: false, // Let Rollup handle modules
           },
         ],
-        [
-          '@babel/preset-react',
-          {
-            runtime: 'automatic', // Use automatic JSX runtime
-          },
-        ],
+
         '@babel/preset-typescript',
       ],
     }),
@@ -63,16 +58,16 @@ const createConfig = (input, outputName, external = []) => ({
         unsafe_comps: true,
       },
       mangle: {
-        reserved: ['Bridge', 'useReaper'], // Keep main exports unmangled
+        reserved: ['Bridge'], // Keep main exports unmangled
       },
     }),
   ],
 })
 
 export default [
-  // Main bundle (everything - Bridge + React hook)
+  // Main bundle (Bridge with all dependencies)
   createConfig('src/index.ts', 'index'),
 
-  // Bridge standalone (for non-React usage)
+  // Bridge standalone bundle
   createConfig('src/Bridge.ts', 'Bridge'),
 ]

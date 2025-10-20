@@ -8,6 +8,7 @@ import {
 import type {
   TransportStateResponse,
   ExtStateResponse,
+  ParsedResponse,
 } from './responseParser.js'
 import type { ReaperAPIConfig } from './config.js'
 import { ReaperBridgeError } from './ReaperBridgeError.js'
@@ -153,8 +154,9 @@ export class ReaperAPI {
    * Use this for complex commands that require special formatting (e.g. SET/POSITION/123.45)
    * See NAMED_ACTION enum in commands.ts for available actions
    */
-  async namedAction(action: string) {
+  async namedAction(action: string): Promise<ParsedResponse | null> {
     const response = await this.sendCommand(action)
+    if (response === null || response === '') return null
     return parseResponse(response)
   }
 
@@ -196,8 +198,8 @@ export class ReaperAPI {
       command = NAMED_ACTION.EXT_STATE_SET(namespace, key, String(value))
     }
 
-    await this.namedAction(command)
-    // No response expected other than HTTP promise resolution
+    // Using sendCommand since no response is expected other than HTTP promise resolution
+    await this.sendCommand(command)
   }
 
   /** Trigger an OSC event */
@@ -206,10 +208,10 @@ export class ReaperAPI {
     arg: string | number | null = null,
     argIsString: boolean = false
   ): Promise<void> {
-    await this.namedAction(
+    // Using sendCommand since no response is expected other than HTTP promise resolution
+    await this.sendCommand(
       NAMED_ACTION.OSC_SEND_EVENT(address, arg, argIsString)
     )
-    // No response expected other than HTTP promise resolution
   }
 
   private setConnectionState(connected: boolean) {
