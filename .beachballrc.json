@@ -1,0 +1,23 @@
+{
+  "repository": "https://github.com/ozwild/reaper-bridge",
+  "access": "public",
+  "registry": "https://registry.npmjs.org/",
+  "generateChangelog": true,
+  "changelogPath": "./CHANGELOG.md",
+  "bumpDeps": false,
+  "tag": "latest",
+  "defaultRemote": "origin",
+  "groups": [
+    {
+      "name": "@ozwild/reaper-bridge",
+      "include": ["."],
+      "disallowedChangeTypes": ["major"]
+    }
+  ],
+  "changelog": {
+    "customRenderers": {
+      "renderHeader": "## [{{version}}] - {{date}}\n\n",
+      "renderEntry": "- {{message}} ([{{commit}}]({{commitLink}}))\n"
+    }
+  }
+}
