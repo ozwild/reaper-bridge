@@ -164,22 +164,23 @@ export function parseTrackResponse(
    */
   const [index, name, flags, volume, pan] = params
 
+  const flagsInt = parseInt(flags, 10)
+
   return {
     index: parseInt(index, 10),
     name: name.replace(REGULAR_EXPRESSIONS.QUOTES, ''), // Remove quotes
-    flags: parseInt(flags, 10),
+    flags: flagsInt,
     volume: parseFloat(volume),
     pan: parseFloat(pan),
-    isMuted: (parseInt(flags, 10) & TRACK_FLAGS.MUTED) !== 0,
-    isSoloed: (parseInt(flags, 10) & TRACK_FLAGS.SOLOED) !== 0,
-    isRecordArmed: (parseInt(flags, 10) & TRACK_FLAGS.RECORD_ARMED) !== 0,
-    isSelected: (parseInt(flags, 10) & TRACK_FLAGS.SELECTED) !== 0,
-    isFolder: (parseInt(flags, 10) & TRACK_FLAGS.FOLDER) !== 0,
-    hasFX: (parseInt(flags, 10) & TRACK_FLAGS.HAS_FX) !== 0,
-    isRecordMonitoringOn:
-      (parseInt(flags, 10) & TRACK_FLAGS.RECORD_MONITORING_ON) !== 0,
+    isMuted: (flagsInt & TRACK_FLAGS.MUTED) !== 0,
+    isSoloed: (flagsInt & TRACK_FLAGS.SOLOED) !== 0,
+    isRecordArmed: (flagsInt & TRACK_FLAGS.RECORD_ARMED) !== 0,
+    isSelected: (flagsInt & TRACK_FLAGS.SELECTED) !== 0,
+    isFolder: (flagsInt & TRACK_FLAGS.FOLDER) !== 0,
+    hasFX: (flagsInt & TRACK_FLAGS.HAS_FX) !== 0,
+    isRecordMonitoringOn: (flagsInt & TRACK_FLAGS.RECORD_MONITORING_ON) !== 0,
     isRecordMonitoringAuto:
-      (parseInt(flags, 10) & TRACK_FLAGS.RECORD_MONITORING_AUTO) !== 0,
+      (flagsInt & TRACK_FLAGS.RECORD_MONITORING_AUTO) !== 0,
   }
 }
 

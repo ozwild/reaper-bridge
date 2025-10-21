@@ -71,7 +71,7 @@ const validate = (
   }
 }
 
-export const NAMED_ACTION = {
+export const REAPER_COMMANDS = {
   /* Transport commands */
 
   TRANSPORT_GET_STATE: 'TRANSPORT',
@@ -200,7 +200,7 @@ export const NAMED_ACTION = {
   UNDO_END: 'SET/UNDO_END',
 } as const
 
-export enum ACTION_ID {
+export enum REAPER_ACTIONS {
   PLAY_PAUSE = '40328',
   PLAY = '40044',
   STOP = '1016',

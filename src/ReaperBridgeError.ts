@@ -1,3 +1,11 @@
+export const ReaperBridgeWarning = (
+  message: string,
+  error: Error | string = ''
+) => {
+  // eslint-disable-next-line no-console
+  console.warn(`ReaperBridge: ${message} response:`, error)
+}
+
 export class ReaperBridgeError extends Error {
   constructor(message?: string) {
     super(
