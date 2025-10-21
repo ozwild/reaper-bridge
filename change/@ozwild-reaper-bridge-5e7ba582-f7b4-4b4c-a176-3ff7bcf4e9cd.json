@@ -1,0 +1,7 @@
+{
+  "type": "minor",
+  "comment": "feat: add beachball for automated versioning and changelog generation",
+  "packageName": "@ozwild/reaper-bridge",
+  "email": "ozwildgt@outlook.com",
+  "dependentChangeType": "patch"
+}
