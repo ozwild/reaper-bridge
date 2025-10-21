@@ -56,6 +56,7 @@
     "@typescript-eslint/parser": "^8.46.1",
     "beachball": "^2.55.1",
     "eslint": "^9.37.0",
+    "husky": "^9.1.7",
     "prettier": "^3.6.2",
     "rollup": "^4.7.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",
@@ -69,11 +70,14 @@
     "lint": "eslint src/",
     "format": "prettier --write \"src/**/*.{js,ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{js,ts,tsx}\"",
+    "prepare": "husky",
     "prepublishOnly": "npm run type-check && npm run build",
     "change": "beachball change",
+    "change:check": "beachball check",
     "version": "beachball bump",
     "changelog": "beachball changelog",
-    "release": "beachball publish"
+    "release": "beachball publish",
+    "pre-push": "npm run change:check"
   },
   "engines": {
     "node": ">=18.0.0"
