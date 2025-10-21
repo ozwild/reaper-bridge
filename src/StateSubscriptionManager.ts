@@ -1,3 +1,4 @@
+import { REAPER_COMMANDS } from './commands.js'
 import type {
   TransportStateResponse,
   TrackStateResponse,
@@ -37,7 +38,11 @@ export type StateSubscriptionCallback<T extends StateType> = (
 ) => void
 
 export class StateSubscriptionManager {
-  private subscriptions = new Map<StateType, Set<StateSubscriptionCallback<any>>>()
+  private subscriptions = new Map<
+    StateType,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Set<StateSubscriptionCallback<any>>
+  >()
   private activeStates = new Set<StateType>()
   private currentState: StateData = {
     transport: null,
@@ -124,19 +129,19 @@ export class StateSubscriptionManager {
     this.activeStates.forEach((stateType) => {
       switch (stateType) {
         case 'transport':
-          commands.push('TRANSPORT')
+          commands.push(REAPER_COMMANDS.TRANSPORT_GET_STATE)
           break
         case 'tracks':
-          commands.push('TRACK')
+          commands.push(REAPER_COMMANDS.TRACK_LIST)
           break
         case 'markers':
-          commands.push('MARKER')
+          commands.push(REAPER_COMMANDS.MARKER_LIST)
           break
         case 'regions':
-          commands.push('REGION')
+          commands.push(REAPER_COMMANDS.REGION_LIST)
           break
         case 'beat':
-          commands.push('BEATPOS')
+          commands.push(REAPER_COMMANDS.TRANSPORT_BEAT)
           break
       }
     })

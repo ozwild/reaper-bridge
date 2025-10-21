@@ -21,17 +21,22 @@ Bridge.init({
   }
 })
 
-// Use actions
+// Use immediate actions for responsive UI
 await Bridge.actions.transport.play()
 await Bridge.actions.transport.stop()
 
-// Subscribe to events
+// Subscribe to specific state changes
+const unsubscribe = Bridge.subscribeToState('transport', (state) => {
+  console.log('Transport:', state?.isPlaying ? 'Playing' : 'Stopped')
+})
+
+// Subscribe to connection events
 const id = Bridge.subscribe({
-  onConnectionChange: (connected) => console.log('Connected:', connected),
-  onTransport: (state) => console.log('Transport:', state)
+  onConnectionChange: (connected) => console.log('Connected:', connected)
 })
 
 // Cleanup
+unsubscribe()
 Bridge.unsubscribe(id)
 ```
 
@@ -57,10 +62,11 @@ import { Bridge } from '@ozwild/reaper-bridge/Bridge'
 ### Key Features
 
 - 🎯 **Singleton Pattern** - Single shared instance across your application
-- 🔄 **Event System** - Subscribe to connection and transport state changes
+- 🔄 **State Subscriptions** - Subscribe to specific state types (transport, tracks, markers, etc.)
+- ⚡ **Immediate Execution** - Responsive UI with immediate vs. queued command execution
 - 🎛️ **Multiple APIs** - Actions, commands, ExtState, and OSC support
 - 🚀 **Simple API** - Easy initialization and configuration
-- 📡 **Transport Polling** - Automatic transport state updates
+- 📡 **Smart Polling** - Automatic polling based on active subscriptions
 - 🔌 **Connection Management** - Connection state tracking and error handling
 - 📝 **TypeScript** - Full type definitions included
 - 🌐 **Framework Agnostic** - Works with any JavaScript framework
@@ -125,30 +131,40 @@ Bridge.init({
 console.log('Bridge ready:', Bridge.isReady())
 console.log('Connected:', Bridge.isConnected())
 
-// Subscribe to events
+// Subscribe to specific state changes
+const unsubscribeTransport = Bridge.subscribeToState('transport', (state) => {
+  if (state) {
+    console.log('Transport:', state.isPlaying ? 'Playing' : 'Stopped')
+    console.log('Position:', state.positionSeconds)
+  }
+})
+
+const unsubscribeTracks = Bridge.subscribeToState('tracks', (tracks) => {
+  console.log(`Found ${tracks?.length || 0} tracks`)
+})
+
+// Subscribe to connection events
 const id = Bridge.subscribe({
   onConnectionChange: (connected) => {
     console.log('Connection status:', connected)
-  },
-  onTransport: (state) => {
-    console.log('Transport:', state.isPlaying ? 'Playing' : 'Stopped')
-    console.log('Position:', state.positionSeconds)
   },
   onError: (error) => {
     console.error('Reaper error:', error.message)
   }
 })
 
-// Control transport
+// Control transport with immediate execution (responsive UI)
 await Bridge.actions.transport.play()
 await Bridge.actions.transport.stop()
 await Bridge.actions.transport.record()
 
-// Get transport state manually
-const state = await Bridge.actions.transport.getState()
-console.log('Current state:', state)
+// Get current state manually
+const transportState = Bridge.getCurrentState('transport')
+console.log('Current state:', transportState)
 
 // Cleanup when done
+unsubscribeTransport()
+unsubscribeTracks()
 Bridge.unsubscribe(id)
 ```
 
@@ -230,9 +246,6 @@ const id = Bridge.subscribe({
   },
   onError: (error, failureCount) => {
     console.error('Error:', error, 'Failures:', failureCount)
-  },
-  onTransport: (state) => {
-    console.log('Transport state:', state)
   }
 })
 ```
@@ -240,8 +253,53 @@ const id = Bridge.subscribe({
 **Event Handlers:**
 
 - `onConnectionChange(isConnected: boolean)` - Connection state changes
-- `onError(error: Error, failureCount: number)` - Error occurred  
-- `onTransport(state: TransportStateResponse)` - Transport state update
+- `onError(error: Error, failureCount: number)` - Error occurred
+
+##### `Bridge.subscribeToState(stateType, callback)` → `UnsubscribeFunction`
+
+Subscribe to specific state updates with fine-grained control.
+
+```typescript
+// Subscribe to transport state changes
+const unsubscribe = Bridge.subscribeToState('transport', (state) => {
+  if (state) {
+    console.log(`Playing: ${state.isPlaying}, Position: ${state.positionSeconds}`)
+  }
+})
+
+// Subscribe to track changes
+const unsubscribeTracks = Bridge.subscribeToState('tracks', (tracks) => {
+  tracks?.forEach((track, i) => {
+    console.log(`Track ${i + 1}: Muted: ${track.mute}, Solo: ${track.solo}`)
+  })
+})
+
+// Subscribe to markers
+const unsubscribeMarkers = Bridge.subscribeToState('markers', (markers) => {
+  console.log(`Found ${markers?.length || 0} markers`)
+})
+
+// Cleanup
+unsubscribe()
+unsubscribeTracks()
+unsubscribeMarkers()
+```
+
+**Available State Types:**
+- `'transport'` - Transport state (play, stop, position, BPM)
+- `'tracks'` - All track states (mute, solo, volume, etc.)  
+- `'markers'` - Project markers
+- `'regions'` - Project regions
+- `'beat'` - Beat position information
+
+##### `Bridge.getCurrentState(stateType)` → `StateData | null`
+
+Get the current cached state for a specific type without subscribing.
+
+```typescript
+const transportState = Bridge.getCurrentState('transport')
+const tracks = Bridge.getCurrentState('tracks')
+```
 
 ##### `Bridge.unsubscribe(id)` → `void`
 
@@ -260,6 +318,51 @@ Bridge.updateSubscriber(id, {
   onTransport: newHandler
 })
 ```
+
+---
+
+## Execution Modes
+
+reaper-bridge supports two execution modes for optimal performance and user experience:
+
+### Immediate Execution
+
+Commands are sent to Reaper instantly when called. Use for:
+- **User interactions** (button clicks, transport controls)
+- **Responsive UI updates** 
+- **Critical timing operations**
+
+```typescript
+// All Bridge.actions methods use immediate execution by default
+await Bridge.actions.transport.play()
+
+// Explicitly request immediate execution
+await Bridge.requests.executeAction(ACTION_ID.PLAY, true)
+```
+
+### Queued Execution  
+
+Commands are batched and sent during the next polling cycle. Use for:
+- **Background operations**
+- **Bulk updates**
+- **Non-critical operations**
+
+```typescript
+// Default behavior for Bridge.requests methods
+await Bridge.requests.executeAction(ACTION_ID.SOME_BACKGROUND_ACTION)
+
+// Explicitly queue (immediate = false)
+await Bridge.requests.executeAction(ACTION_ID.SOME_ACTION, false)
+```
+
+### Benefits
+
+- **Immediate**: Instant feedback, responsive UI
+- **Queued**: Reduced network traffic, efficient batching
+- **Automatic**: High-level actions choose the appropriate mode
+- **Flexible**: Low-level control when needed
+
+---
 
 #### Actions
 
@@ -322,33 +425,53 @@ await Bridge.actions.project.load('C:/Path/To/Project.rpp')
 
 Low-level request methods for direct Reaper API access.
 
-##### `Bridge.requests.sendCommand(cmd)` → `Promise<string>`
+##### `Bridge.requests.sendCommand(cmd, immediate?)` → `Promise<string>`
 
 Send a raw command to Reaper.
 
 ```typescript
+// Queued execution (default)
 const response = await Bridge.requests.sendCommand('TRANSPORT')
+
+// Immediate execution for responsive UI
+const response = await Bridge.requests.sendCommand('TRANSPORT', true)
 ```
 
-##### `Bridge.requests.action(actionId)` → `Promise<void>`
+##### `Bridge.requests.executeAction(actionId, immediate?)` → `Promise<void>`
 
-Execute a Reaper action by ID.
+Execute a Reaper action by ID (fire-and-forget).
 
 ```typescript
 import { ACTION_ID } from '@ozwild/reaper-bridge'
 
-await Bridge.requests.action(ACTION_ID.PLAY)
-await Bridge.requests.action(ACTION_ID.STOP)
+// Queued execution (default)
+await Bridge.requests.executeAction(ACTION_ID.PLAY)
+
+// Immediate execution
+await Bridge.requests.executeAction(ACTION_ID.PLAY, true)
 ```
 
-##### `Bridge.requests.namedAction(action)` → `Promise<ParsedResponse | null>`
+##### `Bridge.requests.executeCommand(command, immediate?)` → `Promise<void>`
 
-Execute a named action with parameters.
+Execute a complex command (fire-and-forget).
 
 ```typescript
 import { NAMED_ACTION } from '@ozwild/reaper-bridge'
 
-await Bridge.requests.namedAction(NAMED_ACTION.POSITION_GOTO_SECONDS(120))
+// Queued execution
+await Bridge.requests.executeCommand(NAMED_ACTION.POSITION_GOTO_SECONDS(120))
+
+// Immediate execution
+await Bridge.requests.executeCommand(NAMED_ACTION.POSITION_GOTO_SECONDS(120), true)
+```
+
+##### `Bridge.requests.requestData(command)` → `Promise<ParsedResponse | null>`
+
+Request data from Reaper (always immediate, expects response).
+
+```typescript
+// Always immediate - use for getting current state
+const response = await Bridge.requests.requestData('TRANSPORT')
 ```
 
 ##### ExtState
@@ -356,10 +479,13 @@ await Bridge.requests.namedAction(NAMED_ACTION.POSITION_GOTO_SECONDS(120))
 Get/set external state values for ReaScript communication.
 
 ```typescript
-// Set a value
+// Set a value (queued by default)
 await Bridge.requests.extState.set('myapp', 'key', 'value')
 
-// Get a value
+// Set a value immediately
+await Bridge.requests.extState.set('myapp', 'key', 'value', false, true)
+
+// Get a value (always immediate)
 const response = await Bridge.requests.extState.get('myapp', 'key')
 console.log(response?.value) // The stored value
 ```
@@ -399,7 +525,9 @@ import type {
   BridgeConfig, 
   EventHandlers,
   TransportStateResponse,
-  TrackStateResponse 
+  TrackStateResponse,
+  StateType,
+  StateSubscriptionCallback
 } from '@ozwild/reaper-bridge'
 
 const config: BridgeConfig = {
@@ -412,9 +540,22 @@ const config: BridgeConfig = {
 }
 
 const handlers: EventHandlers = {
-  onTransport: (state: TransportStateResponse) => {
-    console.log(state.isPlaying)
+  onConnectionChange: (connected: boolean) => {
+    console.log('Connected:', connected)
   }
+}
+
+// Type-safe state subscriptions
+const unsubscribe: () => void = Bridge.subscribeToState('transport', (state: TransportStateResponse | null) => {
+  if (state) {
+    console.log(`Playing: ${state.isPlaying}`)
+  }
+})
+
+// State type checking
+const stateType: StateType = 'tracks'
+const callback: StateSubscriptionCallback<'tracks'> = (tracks) => {
+  tracks?.forEach(track => console.log(track.name))
 }
 ```
 
@@ -474,22 +615,36 @@ await new Promise(resolve => setTimeout(resolve, 5000))
 await Bridge.actions.transport.stop()
 ```
 
-### Monitor Transport State
+### Monitor State Changes
 
 ```typescript
+// Subscribe to transport state
+const unsubscribeTransport = Bridge.subscribeToState('transport', (state) => {
+  if (state?.isPlaying) {
+    console.log(`Playing at ${state.positionSeconds}`)
+  }
+})
+
+// Subscribe to track changes
+const unsubscribeTracks = Bridge.subscribeToState('tracks', (tracks) => {
+  tracks?.forEach((track, i) => {
+    console.log(`Track ${i + 1}: ${track.mute ? 'Muted' : 'Unmuted'}`)
+  })
+})
+
+// Subscribe to connection events
 const id = Bridge.subscribe({
-  onTransport: (state) => {
-    if (state.isPlaying) {
-      console.log(`Playing at ${state.positionSeconds}`)
-    }
-  },
   onConnectionChange: (connected) => {
     console.log(`Connection: ${connected ? 'Connected' : 'Disconnected'}`)
   }
 })
 
 // Cleanup after 60 seconds
-setTimeout(() => Bridge.unsubscribe(id), 60000)
+setTimeout(() => {
+  unsubscribeTransport()
+  unsubscribeTracks()
+  Bridge.unsubscribe(id)
+}, 60000)
 ```
 
 ### Working with Tracks
@@ -515,22 +670,34 @@ console.log(`Track 1 - Muted: ${track?.mute}, Solo: ${track?.solo}`)
 await Bridge.actions.project.load('C:/Music/MySong.rpp')
 ```
 
-### Direct Commands
+### Immediate vs Queued Execution
 
 ```typescript
-import { ACTION_ID, NAMED_ACTION } from '@ozwild/reaper-bridge'
+import { Bridge, ACTION_ID, NAMED_ACTION } from '@ozwild/reaper-bridge'
 
-// Execute action by ID
-await Bridge.requests.action(ACTION_ID.PLAY)
+// Immediate execution for responsive UI
+await Bridge.actions.transport.play()  // Always immediate
+await Bridge.requests.executeAction(ACTION_ID.STOP, true)  // Explicit immediate
 
-// Execute named action with parameters
-await Bridge.requests.namedAction(NAMED_ACTION.POSITION_GOTO_SECONDS(120))
+// Queued execution for efficiency
+await Bridge.requests.executeAction(ACTION_ID.SOME_BACKGROUND_ACTION)  // Default queued
+await Bridge.requests.executeCommand(NAMED_ACTION.TRACK_SET_VOLUME(1, 0.8), false)  // Explicit queued
 
-// Send raw command
-const response = await Bridge.requests.sendCommand('TRANSPORT')
+// Mixed workflow - immediate user actions, queued bulk operations
+async function handleUserPlayback() {
+  // User clicked play - immediate for responsiveness
+  await Bridge.actions.transport.play()
+  
+  // Update UI state immediately
+  const currentState = Bridge.getCurrentState('transport')
+  updateUI(currentState)
+  
+  // Background tasks can be queued
+  await Bridge.requests.executeCommand('SET/UNDO_BEGIN', false)
+}
 ```
 
-### Error Handling
+### Error Handling with State Subscriptions
 
 ```typescript
 const id = Bridge.subscribe({
@@ -544,10 +711,23 @@ const id = Bridge.subscribe({
   }
 })
 
+// Error handling with state subscriptions
+const unsubscribe = Bridge.subscribeToState('transport', (state) => {
+  if (state === null) {
+    console.warn('Transport state unavailable')
+    return
+  }
+  
+  // State is available and valid
+  updateTransportUI(state)
+})
+
 try {
+  // Immediate actions for user interactions
   await Bridge.actions.transport.play()
 } catch (error) {
   console.error('Failed to play:', error.message)
+  // Show user feedback
 }
 ```
 
@@ -558,8 +738,9 @@ try {
 ### Design Patterns
 
 - **Singleton:** Single Bridge instance shared across entire application
-- **Event System:** Subscribe to connection and transport state changes
-- **Automatic Polling:** Transport state polling starts/stops based on subscribers
+- **State Subscriptions:** Fine-grained subscriptions to specific state types  
+- **Immediate/Queued Execution:** Dual execution modes for performance optimization
+- **Smart Polling:** Automatic polling based on active state subscriptions
 
 ### Communication Channels
 
@@ -569,6 +750,26 @@ reaper-bridge uses Reaper's Web Control Surface endpoints:
 2. **Named Commands** (`/_/{command}`) - Execute commands with parameters  
 3. **External State** (`/_/SET|GET/EXTSTATE/{ns}/{key}`) - Data storage
 4. **OSC Triggers** (`/_/OSC/{address}`) - Trigger ReaScripts
+
+### State Subscription System
+
+The `StateSubscriptionManager` provides efficient, type-safe state management:
+
+```typescript
+// Subscribe to specific state types
+const unsubscribe = Bridge.subscribeToState('transport', callback)
+
+// Polling automatically includes only active subscriptions
+// Transport + Tracks = "TRANSPORT;TRACK" in single request
+// No subscriptions = No polling
+```
+
+**Available States:**
+- `transport` - Play state, position, BPM
+- `tracks` - Track mute/solo/volume states  
+- `markers` - Project markers
+- `regions` - Project regions
+- `beat` - Beat position information
 
 ---
 

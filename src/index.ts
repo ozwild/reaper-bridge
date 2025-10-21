@@ -19,7 +19,7 @@ export type {
 } from './responseParser.js'
 
 // Export constants and commands for advanced usage
-export { ACTION_ID, NAMED_ACTION } from './commands.js'
+export { REAPER_ACTIONS, REAPER_COMMANDS } from './commands.js'
 
 // Export the main Bridge class
 export { Bridge }

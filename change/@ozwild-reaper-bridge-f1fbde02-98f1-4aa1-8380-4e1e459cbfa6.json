@@ -1,0 +1,7 @@
+{
+  "type": "minor",
+  "comment": "`States Subscriptions`: Reaper main states (transport, tracks, etc) can now be retrieved via subscription ",
+  "packageName": "@ozwild/reaper-bridge",
+  "email": "ozwildgt@outlook.com",
+  "dependentChangeType": "patch"
+}

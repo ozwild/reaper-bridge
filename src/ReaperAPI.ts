@@ -1,4 +1,4 @@
-import { ACTION_ID, NAMED_ACTION } from './commands.js'
+import { REAPER_ACTIONS, REAPER_COMMANDS } from './commands.js'
 import {
   parseExtStateResponse,
   parseResponse,
@@ -20,7 +20,8 @@ import type {
   StateType,
   StateSubscriptionCallback,
 } from './StateSubscriptionManager.js'
-import { ReaperBridgeError } from './ReaperBridgeError.js'
+import { ReaperBridgeError, ReaperBridgeWarning } from './ReaperBridgeError.js'
+import { RESPONSE_TYPES } from './constants.js'
 
 export interface ConnectionInfo {
   host: string
@@ -126,10 +127,6 @@ export class ReaperAPI {
         immediate,
       })
 
-      console.log(
-        `Queued command: ${command} (immediate: ${immediate}), queue length: ${this.commandQueue.length}`
-      )
-
       // If immediate or not polling, process the queue now
       if (immediate || !this.isPolling) {
         void this.processQueue()
@@ -170,13 +167,6 @@ export class ReaperAPI {
           const combinedCommand = batchedCommands
             .map((item) => item.command)
             .join(';') // Reaper uses semicolon to separate commands
-
-          console.log(
-            'Processing batched commands:',
-            combinedCommand,
-            'from original ',
-            batchedCommands
-          )
 
           const response = await this.sendCommandDirect(combinedCommand)
 
@@ -262,7 +252,7 @@ export class ReaperAPI {
    * @param actionId - The action ID to execute
    * @param immediate - Whether to send immediately or queue for next poll
    */
-  async executeAction(actionId: ACTION_ID, immediate = false): Promise<void> {
+  async executeAction(actionId: REAPER_ACTIONS, immediate = false): Promise<void> {
     await this.sendCommand(actionId, immediate)
   }
 
@@ -272,10 +262,10 @@ export class ReaperAPI {
    * Perfect for user interactions that need responsive UI feedback
    * @param actionId - The action ID to execute
    */
-  async executeActionImmediate(actionId: ACTION_ID): Promise<void> {
+  async executeActionImmediate(actionId: REAPER_ACTIONS): Promise<void> {
     // Execute the action immediately
     await this.sendCommand(actionId, true) // Immediate execution
-    
+
     // Schedule debounced state polling for UI updates
     this.scheduleImmediateStatePoll()
   }
@@ -297,7 +287,7 @@ export class ReaperAPI {
   async executeCommandImmediate(command: string): Promise<void> {
     // Execute the command immediately
     await this.sendCommand(command, true) // Immediate execution
-    
+
     // Schedule debounced state polling for UI updates
     this.scheduleImmediateStatePoll()
   }
@@ -315,7 +305,7 @@ export class ReaperAPI {
   /**
    * @deprecated Use executeAction() instead
    */
-  async action(actionId: ACTION_ID, immediate = false): Promise<void> {
+  async action(actionId: REAPER_ACTIONS, immediate = false): Promise<void> {
     return this.executeAction(actionId, immediate)
   }
 
@@ -336,7 +326,7 @@ export class ReaperAPI {
 
   /** Get current transport state */
   async getTransportState(): Promise<TransportStateResponse | null> {
-    const response = await this.requestData(NAMED_ACTION.TRANSPORT_GET_STATE)
+    const response = await this.requestData(REAPER_COMMANDS.TRANSPORT_GET_STATE)
     if (response === null) return null
     return parseTransportResponse(response)
   }
@@ -347,7 +337,7 @@ export class ReaperAPI {
     key: string
   ): Promise<ExtStateResponse | null> {
     const response = await this.requestData(
-      NAMED_ACTION.EXT_STATE_GET(namespace, key)
+      REAPER_COMMANDS.EXT_STATE_GET(namespace, key)
     )
     if (response === null) return null
     return parseExtStateResponse(response)
@@ -364,13 +354,13 @@ export class ReaperAPI {
     let command = ''
 
     if (persist) {
-      command = NAMED_ACTION.EXT_STATE_SET_PERSISTENT(
+      command = REAPER_COMMANDS.EXT_STATE_SET_PERSISTENT(
         namespace,
         key,
         String(value)
       )
     } else {
-      command = NAMED_ACTION.EXT_STATE_SET(namespace, key, String(value))
+      command = REAPER_COMMANDS.EXT_STATE_SET(namespace, key, String(value))
     }
 
     await this.executeCommand(command, immediate)
@@ -384,7 +374,7 @@ export class ReaperAPI {
     immediate = false
   ): Promise<void> {
     await this.executeCommand(
-      NAMED_ACTION.OSC_SEND_EVENT(address, arg, argIsString),
+      REAPER_COMMANDS.OSC_SEND_EVENT(address, arg, argIsString),
       immediate
     )
   }
@@ -427,8 +417,6 @@ export class ReaperAPI {
       // Get active polling commands from subscription manager
       const pollingCommands = this.stateManager.getPollingCommands()
 
-      console.log('Polling commands:', pollingCommands)
-
       if (pollingCommands.length > 0) {
         try {
           // Send combined commands for efficiency (use semicolon separator)
@@ -440,7 +428,7 @@ export class ReaperAPI {
           await this.parseAndDistributeStates(response, pollingCommands)
         } catch (error) {
           // Handle polling errors gracefully
-          console.warn('Polling error:', error)
+          ReaperBridgeWarning('Polling error', error as Error)
         }
       }
 
@@ -483,50 +471,43 @@ export class ReaperAPI {
 
       if (responsesForCommand.length === 0) return
 
-      try {
-        switch (command) {
-          case 'TRANSPORT':
-            if (responsesForCommand.length > 0) {
-              const transportState = parseTransportResponse(
-                responsesForCommand[0]
-              )
-              this.stateManager.updateState('transport', transportState)
-            }
-            break
+      const isMultiResponse = [
+        RESPONSE_TYPES.TRACK,
+        RESPONSE_TYPES.MARKER,
+        RESPONSE_TYPES.REGION,
+      ].includes(command as RESPONSE_TYPES)
 
-          case 'TRACK':
-            // TRACK command returns multiple lines, one for each track
+      try {
+        if (isMultiResponse) {
+          const filter = <T>() => (t: T | null): t is NonNullable<T> => t !== null
+          if (command === RESPONSE_TYPES.TRACK) {
             const trackStates = responsesForCommand
               .map((r) => parseTrackResponse(r))
-              .filter((t): t is NonNullable<typeof t> => t !== null)
+              .filter(filter())
             this.stateManager.updateState('tracks', trackStates)
-            break
-
-          case 'MARKER':
-            // MARKER command returns multiple lines, one for each marker
+          } else if (command === RESPONSE_TYPES.MARKER) {
             const markerStates = responsesForCommand
               .map((r) => parseMarkerResponse(r))
-              .filter((m): m is NonNullable<typeof m> => m !== null)
+              .filter(filter())
             this.stateManager.updateState('markers', markerStates)
-            break
-
-          case 'REGION':
-            // REGION command returns multiple lines, one for each region
+          } else if (command === RESPONSE_TYPES.REGION) {
             const regionStates = responsesForCommand
               .map((r) => parseRegionResponse(r))
-              .filter((r): r is NonNullable<typeof r> => r !== null)
+              .filter(filter())
             this.stateManager.updateState('regions', regionStates)
-            break
-
-          case 'BEATPOS':
-            if (responsesForCommand.length > 0) {
-              const beatState = parseBeatResponse(responsesForCommand[0])
-              this.stateManager.updateState('beat', beatState)
-            }
-            break
+          }
+        } else if (responsesForCommand.length > 0) {
+          const response = responsesForCommand[0]
+          if (command === RESPONSE_TYPES.TRANSPORT) {
+            const transportState = parseTransportResponse(response)
+            this.stateManager.updateState('transport', transportState)
+          } else if (command === RESPONSE_TYPES.BEAT) {
+            const beatState = parseBeatResponse(response)
+            this.stateManager.updateState('beat', beatState)
+          }
         }
       } catch (error) {
-        console.warn(`Error parsing ${command} response:`, error)
+        ReaperBridgeWarning(`Error parsing ${command} response`, error as Error)
       }
     })
   }
@@ -556,14 +537,14 @@ export class ReaperAPI {
     if (this.immediateDebounceTimer) {
       clearTimeout(this.immediateDebounceTimer)
     }
-    
+
     // Schedule state poll after debounce delay
     this.immediateDebounceTimer = setTimeout(async () => {
       try {
         // Only trigger state poll - commands were already executed
         await this.triggerStatePoll()
       } catch (error) {
-        console.warn('Error in immediate state poll:', error)
+        ReaperBridgeWarning('Error in immediate state poll', error as Error)
       } finally {
         this.immediateDebounceTimer = null
       }
@@ -577,18 +558,18 @@ export class ReaperAPI {
   private async triggerStatePoll(): Promise<void> {
     // Get active polling commands from subscription manager
     const pollingCommands = this.stateManager.getPollingCommands()
-    
+
     if (pollingCommands.length > 0) {
       try {
         // Send combined commands for efficiency
         const combinedCommand = pollingCommands.join(';')
         const response = await this.sendCommandDirect(combinedCommand)
-        
+
         // Parse and distribute states to subscribers
         await this.parseAndDistributeStates(response, pollingCommands)
       } catch (error) {
         // Handle polling errors gracefully
-        console.warn('Immediate state poll error:', error)
+        ReaperBridgeWarning('Immediate state poll error', error as Error)
       }
     }
   }
@@ -637,7 +618,7 @@ export class ReaperAPI {
 
   async testConnection(): Promise<boolean> {
     try {
-      await this.requestData(NAMED_ACTION.TRANSPORT_GET_STATE as string)
+      await this.requestData(REAPER_COMMANDS.TRANSPORT_GET_STATE as string)
       return true
     } catch (_) {
       return false

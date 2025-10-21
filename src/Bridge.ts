@@ -1,5 +1,5 @@
 import { ReaperAPI } from './ReaperAPI.js'
-import { ACTION_ID, NAMED_ACTION } from './commands.js'
+import { REAPER_ACTIONS, REAPER_COMMANDS } from './commands.js'
 import { parseMultiResponse, parseTrackResponse } from './responseParser.js'
 import { DEFAULT_CONFIG } from './config.js'
 
@@ -241,7 +241,7 @@ const Bridge = {
      * @param actionId - The action ID to execute
      * @param immediate - Whether to send immediately or queue for next poll
      */
-    executeAction(actionId: ACTION_ID, immediate = false): Promise<void> {
+    executeAction(actionId: REAPER_ACTIONS, immediate = false): Promise<void> {
       return getInstance().executeAction(actionId, immediate)
     },
 
@@ -265,7 +265,7 @@ const Bridge = {
     /**
      * @deprecated Use executeAction() instead
      */
-    action(actionId: ACTION_ID, immediate = false): Promise<void> {
+    action(actionId: REAPER_ACTIONS, immediate = false): Promise<void> {
       return getInstance().executeAction(actionId, immediate)
     },
 
@@ -325,53 +325,53 @@ const Bridge = {
    */
   actions: {
     transport: {
-      play: (): Promise<void> => getInstance().executeActionImmediate(ACTION_ID.PLAY),
-      pause: (): Promise<void> => getInstance().executeActionImmediate(ACTION_ID.PAUSE),
+      play: (): Promise<void> => getInstance().executeActionImmediate(REAPER_ACTIONS.PLAY),
+      pause: (): Promise<void> => getInstance().executeActionImmediate(REAPER_ACTIONS.PAUSE),
       async stop(): Promise<void> {
         const reaper = getInstance()
-        await reaper.executeActionImmediate(ACTION_ID.STOP)
-        await reaper.executeActionImmediate(ACTION_ID.GOTO_PROJECT_START)
+        await reaper.executeActionImmediate(REAPER_ACTIONS.STOP)
+        await reaper.executeActionImmediate(REAPER_ACTIONS.GOTO_PROJECT_START)
       },
       playPause: (): Promise<void> =>
-        getInstance().executeActionImmediate(ACTION_ID.PLAY_PAUSE),
+        getInstance().executeActionImmediate(REAPER_ACTIONS.PLAY_PAUSE),
       record: (): Promise<void> =>
-        getInstance().executeActionImmediate(ACTION_ID.RECORD),
+        getInstance().executeActionImmediate(REAPER_ACTIONS.RECORD),
       toggleLoop: (): Promise<void> =>
-        getInstance().executeActionImmediate(ACTION_ID.TOGGLE_LOOP),
+        getInstance().executeActionImmediate(REAPER_ACTIONS.TOGGLE_LOOP),
       getState: (): Promise<TransportStateResponse | null> =>
         getInstance().getTransportState(),
     },
 
     position: {
       goToStart(): Promise<void> {
-        return getInstance().executeActionImmediate(ACTION_ID.GOTO_PROJECT_START)
+        return getInstance().executeActionImmediate(REAPER_ACTIONS.GOTO_PROJECT_START)
       },
 
       goToPreviousMarker(): Promise<void> {
-        return getInstance().executeActionImmediate(ACTION_ID.GOTO_PREVIOUS_MARKER)
+        return getInstance().executeActionImmediate(REAPER_ACTIONS.GOTO_PREVIOUS_MARKER)
       },
 
       goToNextMarker(): Promise<void> {
-        return getInstance().executeActionImmediate(ACTION_ID.GOTO_NEXT_MARKER)
+        return getInstance().executeActionImmediate(REAPER_ACTIONS.GOTO_NEXT_MARKER)
       },
 
       async goToTime(position: number): Promise<void> {
         await getInstance().executeCommandImmediate(
-          NAMED_ACTION.POSITION_GOTO_SECONDS(position)
+          REAPER_COMMANDS.POSITION_GOTO_SECONDS(position)
         )
       },
     },
 
     master: {
       toggleMute: (): Promise<void> =>
-        getInstance().executeActionImmediate(ACTION_ID.TOGGLE_MASTER_MUTE),
+        getInstance().executeActionImmediate(REAPER_ACTIONS.TOGGLE_MASTER_MUTE),
     },
 
     tracks: {
       async getAll(): Promise<TrackStateResponse[] | null> {
         const reaper = getInstance()
         // We use sendCommand here to get the raw response text for multi-response parsing
-        const responseText = await reaper.sendCommand(NAMED_ACTION.TRACK_LIST)
+        const responseText = await reaper.sendCommand(REAPER_COMMANDS.TRACK_LIST)
         if (responseText === null) return null
         return parseMultiResponse(responseText, parseTrackResponse)
       },
@@ -379,7 +379,7 @@ const Bridge = {
       async getTrack(trackNumber: number): Promise<TrackStateResponse | null> {
         const reaper = getInstance()
         const response = await reaper.requestData(
-          NAMED_ACTION.TRACK_GET_STATE(trackNumber)
+          REAPER_COMMANDS.TRACK_GET_STATE(trackNumber)
         )
         if (response === null) return null
         return parseTrackResponse(response)
@@ -387,13 +387,13 @@ const Bridge = {
 
       async toggleMute(trackNumber: number): Promise<void> {
         await getInstance().executeCommandImmediate(
-          NAMED_ACTION.TRACK_TOGGLE_MUTE(trackNumber)
+          REAPER_COMMANDS.TRACK_TOGGLE_MUTE(trackNumber)
         )
       },
 
       async toggleSolo(trackNumber: number): Promise<void> {
         await getInstance().executeCommandImmediate(
-          NAMED_ACTION.TRACK_TOGGLE_SOLO(trackNumber)
+          REAPER_COMMANDS.TRACK_TOGGLE_SOLO(trackNumber)
         )
       },
     },
