@@ -741,7 +741,7 @@ See [LICENSE](LICENSE) file for details.
 
 1. Check [Troubleshooting](#troubleshooting) section
 2. Read [API documentation](docs/API.md)
-3. Search [existing issues](https://github.com/yourusername/reaper-bridge/issues)
+3. Search [existing issues](https://github.com/ozwild/reaper-bridge/issues)
 4. Open a [new issue](https://github.com/ozwild/reaper-bridge/issues/new)
 
 **Found a Bug?**
