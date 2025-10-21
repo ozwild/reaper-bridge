@@ -11,6 +11,10 @@ import type {
   TrackStateResponse,
   TransportStateResponse,
 } from './responseParser.js'
+import type {
+  StateType,
+  StateSubscriptionCallback,
+} from './StateSubscriptionManager.js'
 import { ReaperBridgeError } from './ReaperBridgeError.js'
 
 export type BridgeConfig = ReaperAPIConfig
@@ -18,7 +22,7 @@ export type BridgeConfig = ReaperAPIConfig
 export interface EventHandlers {
   onConnectionChange?: (connected: boolean) => void
   onError?: (error: Error, failureCount: number) => void
-  onTransport?: (response: TransportStateResponse) => void
+  // onTransport removed - use subscribeToState('transport', callback) instead
 }
 
 // ============================================================================
@@ -83,14 +87,7 @@ function ensurePolling() {
     const inst = getInstance()
     isPollingActive = true
 
-    inst.startPolling((response) => {
-      // Broadcast to all subscribers
-      subscribers.forEach((subscriber) => {
-        if (subscriber.onTransport && response) {
-          subscriber.onTransport(response)
-        }
-      })
-    })
+    inst.startPolling()
   }
 }
 
@@ -208,31 +205,78 @@ const Bridge = {
   },
 
   /**
+   * Subscribe to state updates
+   */
+  subscribeToState<T extends StateType>(
+    stateType: T,
+    callback: StateSubscriptionCallback<T>
+  ): () => void {
+    return getInstance().subscribeToState(stateType, callback)
+  },
+
+  /**
+   * Get current state for a specific type
+   */
+  getCurrentState<T extends StateType>(stateType: T) {
+    return getInstance().getCurrentState(stateType)
+  },
+
+  /**
    * Direct request methods
    */
   requests: {
     /**
      * Send a raw command to Reaper and returns the raw response text
+     * @param cmd - The command to send
+     * @param immediate - Whether to send immediately or queue for next poll
      */
-    sendCommand(cmd: string): Promise<string> {
-      return getInstance().sendCommand(cmd)
+    sendCommand(cmd: string, immediate = false): Promise<string> {
+      return getInstance().sendCommand(cmd, immediate)
     },
 
     /**
-     * Execute a Reaper action by ID
+     * Execute a Reaper action by ID (fire-and-forget)
      * Most common actions are available in the ACTION_ID enum
      * Look up action IDs in Reaper's Action List
+     * @param actionId - The action ID to execute
+     * @param immediate - Whether to send immediately or queue for next poll
      */
-    action(actionId: ACTION_ID): Promise<void> {
-      return getInstance().action(actionId)
+    executeAction(actionId: ACTION_ID, immediate = false): Promise<void> {
+      return getInstance().executeAction(actionId, immediate)
     },
 
     /**
-     * Execute a Reaper action by name
-     * Most common actions are available in the NAMED_ACTION enum
+     * Execute a complex command (fire-and-forget)
+     * @param command - The command to execute
+     * @param immediate - Whether to send immediately or queue for next poll
      */
-    namedAction(action: string): Promise<ParsedResponse | null> {
-      return getInstance().namedAction(action)
+    executeCommand(command: string, immediate = false): Promise<void> {
+      return getInstance().executeCommand(command, immediate)
+    },
+
+    /**
+     * Request data from Reaper (always immediate, expects response)
+     * @param command - The command to send
+     */
+    requestData(command: string): Promise<ParsedResponse | null> {
+      return getInstance().requestData(command)
+    },
+
+    /**
+     * @deprecated Use executeAction() instead
+     */
+    action(actionId: ACTION_ID, immediate = false): Promise<void> {
+      return getInstance().executeAction(actionId, immediate)
+    },
+
+    /**
+     * @deprecated Use requestData() or executeCommand() instead
+     */
+    namedAction(
+      action: string,
+      immediate = false
+    ): Promise<ParsedResponse | null> {
+      return getInstance().namedAction(action, immediate)
     },
 
     extState: {
@@ -240,21 +284,38 @@ const Bridge = {
         return getInstance().getExtState(namespace, key)
       },
 
-      async set(namespace: string, key: string, value: string): Promise<void> {
-        await getInstance().setExtState(namespace, key, value)
+      async set(
+        namespace: string,
+        key: string,
+        value: string,
+        persist = false,
+        immediate = false
+      ): Promise<void> {
+        await getInstance().setExtState(
+          namespace,
+          key,
+          value,
+          persist,
+          immediate
+        )
       },
     },
 
     OSC: {
       /**
        * Trigger an OSC event
+       * @param address - OSC address
+       * @param arg - OSC argument
+       * @param argIsString - Whether the argument should be treated as string
+       * @param immediate - Whether to send immediately or queue for next poll
        */
       async trigger(
         address: string,
         arg: string | number | null = null,
-        argIsString?: boolean
+        argIsString = false,
+        immediate = false
       ): Promise<void> {
-        await getInstance().triggerOSC(address, arg, argIsString)
+        await getInstance().triggerOSC(address, arg, argIsString, immediate)
       },
     },
   },
@@ -264,37 +325,38 @@ const Bridge = {
    */
   actions: {
     transport: {
-      play: (): Promise<void> => getInstance().action(ACTION_ID.PLAY),
-      pause: (): Promise<void> => getInstance().action(ACTION_ID.PAUSE),
+      play: (): Promise<void> => getInstance().executeActionImmediate(ACTION_ID.PLAY),
+      pause: (): Promise<void> => getInstance().executeActionImmediate(ACTION_ID.PAUSE),
       async stop(): Promise<void> {
         const reaper = getInstance()
-        await reaper.action(ACTION_ID.STOP)
-        await reaper.action(ACTION_ID.GOTO_PROJECT_START)
+        await reaper.executeActionImmediate(ACTION_ID.STOP)
+        await reaper.executeActionImmediate(ACTION_ID.GOTO_PROJECT_START)
       },
       playPause: (): Promise<void> =>
-        getInstance().action(ACTION_ID.PLAY_PAUSE),
-      record: (): Promise<void> => getInstance().action(ACTION_ID.RECORD),
+        getInstance().executeActionImmediate(ACTION_ID.PLAY_PAUSE),
+      record: (): Promise<void> =>
+        getInstance().executeActionImmediate(ACTION_ID.RECORD),
       toggleLoop: (): Promise<void> =>
-        getInstance().action(ACTION_ID.TOGGLE_LOOP),
+        getInstance().executeActionImmediate(ACTION_ID.TOGGLE_LOOP),
       getState: (): Promise<TransportStateResponse | null> =>
         getInstance().getTransportState(),
     },
 
     position: {
       goToStart(): Promise<void> {
-        return getInstance().action(ACTION_ID.GOTO_PROJECT_START)
+        return getInstance().executeActionImmediate(ACTION_ID.GOTO_PROJECT_START)
       },
 
       goToPreviousMarker(): Promise<void> {
-        return getInstance().action(ACTION_ID.GOTO_PREVIOUS_MARKER)
+        return getInstance().executeActionImmediate(ACTION_ID.GOTO_PREVIOUS_MARKER)
       },
 
       goToNextMarker(): Promise<void> {
-        return getInstance().action(ACTION_ID.GOTO_NEXT_MARKER)
+        return getInstance().executeActionImmediate(ACTION_ID.GOTO_NEXT_MARKER)
       },
 
       async goToTime(position: number): Promise<void> {
-        await getInstance().namedAction(
+        await getInstance().executeCommandImmediate(
           NAMED_ACTION.POSITION_GOTO_SECONDS(position)
         )
       },
@@ -302,7 +364,7 @@ const Bridge = {
 
     master: {
       toggleMute: (): Promise<void> =>
-        getInstance().action(ACTION_ID.TOGGLE_MASTER_MUTE),
+        getInstance().executeActionImmediate(ACTION_ID.TOGGLE_MASTER_MUTE),
     },
 
     tracks: {
@@ -316,7 +378,7 @@ const Bridge = {
 
       async getTrack(trackNumber: number): Promise<TrackStateResponse | null> {
         const reaper = getInstance()
-        const response = await reaper.namedAction(
+        const response = await reaper.requestData(
           NAMED_ACTION.TRACK_GET_STATE(trackNumber)
         )
         if (response === null) return null
@@ -324,13 +386,15 @@ const Bridge = {
       },
 
       async toggleMute(trackNumber: number): Promise<void> {
-        const reaper = getInstance()
-        await reaper.namedAction(NAMED_ACTION.TRACK_TOGGLE_MUTE(trackNumber))
+        await getInstance().executeCommandImmediate(
+          NAMED_ACTION.TRACK_TOGGLE_MUTE(trackNumber)
+        )
       },
 
       async toggleSolo(trackNumber: number): Promise<void> {
-        const reaper = getInstance()
-        await reaper.namedAction(NAMED_ACTION.TRACK_TOGGLE_SOLO(trackNumber))
+        await getInstance().executeCommandImmediate(
+          NAMED_ACTION.TRACK_TOGGLE_SOLO(trackNumber)
+        )
       },
     },
 
@@ -361,6 +425,32 @@ const Bridge = {
       test(): Promise<boolean> {
         return getInstance().testConnection()
       },
+    },
+  },
+
+  /**
+   * Queue management
+   */
+  queue: {
+    /**
+     * Flush the command queue immediately
+     */
+    flush(): Promise<void> {
+      return getInstance().flushQueue()
+    },
+
+    /**
+     * Clear all pending commands in the queue
+     */
+    clear(): void {
+      getInstance().clearQueue()
+    },
+
+    /**
+     * Get the number of pending commands in the queue
+     */
+    get length(): number {
+      return getInstance().queueLength
     },
   },
 
