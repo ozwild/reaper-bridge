@@ -419,7 +419,7 @@ await Bridge.actions.tracks.toggleSolo(1)
 await Bridge.actions.project.load('C:/Path/To/Project.rpp')
 ```
 
-**Note:** Project loading requires ReaperBridge.lua script loaded in Reaper with OSC mapping to `/osworks`.
+**Note:** Project loading requires ReaperBridge.lua script loaded in Reaper with OSC mapping to `/reaper_bridge`.
 
 #### Requests
 
@@ -495,7 +495,7 @@ console.log(response?.value) // The stored value
 Trigger OSC-mapped ReaScripts.
 
 ```typescript
-await Bridge.requests.OSC.trigger('osworks', 'argument', true)
+await Bridge.requests.OSC.trigger('your-mapped-osc-address', 'argument', true)
 ```
 
 #### Connection
@@ -666,7 +666,7 @@ console.log(`Track 1 - Muted: ${track?.mute}, Solo: ${track?.solo}`)
 ### Load Project with OSC
 
 ```typescript
-// Requires Osworks.lua script in Reaper with OSC mapping
+// Requires ReaperBridge.lua script in Reaper with OSC mapping
 await Bridge.actions.project.load('C:/Music/MySong.rpp')
 ```
 
@@ -788,7 +788,7 @@ const unsubscribe = Bridge.subscribeToState('transport', callback)
 
 ### Optional Dependencies
 
-- **Osworks.lua:** Required for project loading feature
+- **ReaperBridge.lua:** Required for project loading feature
 
 ---
 

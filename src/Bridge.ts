@@ -16,6 +16,7 @@ import type {
   StateSubscriptionCallback,
 } from './StateSubscriptionManager.js'
 import { ReaperBridgeError } from './ReaperBridgeError.js'
+import { OSC_ADDRESS } from './constants.js'
 
 export type BridgeConfig = ReaperAPIConfig
 
@@ -393,12 +394,8 @@ const Bridge = {
     project: {
       async load(filename: string): Promise<void> {
         const reaper = getInstance()
-        // const argument = `open_project|${encodeURIComponent(filename)}`
-        // @TODO: make OSC address customizable, default to reaper-bridge
-        const address = 'osworks'
-        // @todo: make sure that filename is properly encoded by the underlying command method
         const argument = `open_project|${filename}`
-        await reaper.triggerOSC(address, argument, true)
+        await reaper.triggerOSC(OSC_ADDRESS, argument, true)
       },
     },
 
