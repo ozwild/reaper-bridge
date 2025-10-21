@@ -1,5 +1,6 @@
 export const APP_NAME = 'ReaperBridge'
 export const APP_VERSION = '0.1.0'
+export const OSC_ADDRESS = 'reaper_bridge'
 
 /**
  * Command separator for batching multiple commands in a single request

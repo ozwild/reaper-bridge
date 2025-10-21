@@ -1,0 +1,7 @@
+{
+  "type": "minor",
+  "comment": "`OSC`: Update default osc address",
+  "packageName": "@ozwild/reaper-bridge",
+  "email": "ozwildgt@outlook.com",
+  "dependentChangeType": "patch"
+}
