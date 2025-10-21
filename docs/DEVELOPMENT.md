@@ -1,8 +1,41 @@
 # Development Workflow
 
-## Architecture Overview
+### Local Development
 
-This branch introduces significant enhancements to reaper-bridge:
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/reaper-bridge.git
+cd reaper-bridge
+
+# Install dependencies
+yarn install
+
+# Build
+yarn build
+
+# Type check
+yarn type-check
+
+# Lint
+yarn lint
+
+# Format
+yarn format
+```
+
+### Versioning Workflow
+
+This project uses automated semantic versioning. Before committing changes that affect the API:
+
+```bash
+# Create a change file for your modifications
+yarn change
+```
+
+Git hooks will automatically:
+
+- Run type checking and linting before commits
+- Verify change files exist before pushes (for code changes)
 
 ### State Subscriptions
 
