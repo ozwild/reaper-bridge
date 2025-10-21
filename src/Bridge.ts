@@ -22,7 +22,6 @@ export type BridgeConfig = ReaperAPIConfig
 export interface EventHandlers {
   onConnectionChange?: (connected: boolean) => void
   onError?: (error: Error, failureCount: number) => void
-  // onTransport removed - use subscribeToState('transport', callback) instead
 }
 
 // ============================================================================
@@ -262,23 +261,6 @@ const Bridge = {
       return getInstance().requestData(command)
     },
 
-    /**
-     * @deprecated Use executeAction() instead
-     */
-    action(actionId: REAPER_ACTIONS, immediate = false): Promise<void> {
-      return getInstance().executeAction(actionId, immediate)
-    },
-
-    /**
-     * @deprecated Use requestData() or executeCommand() instead
-     */
-    namedAction(
-      action: string,
-      immediate = false
-    ): Promise<ParsedResponse | null> {
-      return getInstance().namedAction(action, immediate)
-    },
-
     extState: {
       get(namespace: string, key: string): Promise<ExtStateResponse | null> {
         return getInstance().getExtState(namespace, key)
@@ -325,8 +307,10 @@ const Bridge = {
    */
   actions: {
     transport: {
-      play: (): Promise<void> => getInstance().executeActionImmediate(REAPER_ACTIONS.PLAY),
-      pause: (): Promise<void> => getInstance().executeActionImmediate(REAPER_ACTIONS.PAUSE),
+      play: (): Promise<void> =>
+        getInstance().executeActionImmediate(REAPER_ACTIONS.PLAY),
+      pause: (): Promise<void> =>
+        getInstance().executeActionImmediate(REAPER_ACTIONS.PAUSE),
       async stop(): Promise<void> {
         const reaper = getInstance()
         await reaper.executeActionImmediate(REAPER_ACTIONS.STOP)
@@ -344,15 +328,21 @@ const Bridge = {
 
     position: {
       goToStart(): Promise<void> {
-        return getInstance().executeActionImmediate(REAPER_ACTIONS.GOTO_PROJECT_START)
+        return getInstance().executeActionImmediate(
+          REAPER_ACTIONS.GOTO_PROJECT_START
+        )
       },
 
       goToPreviousMarker(): Promise<void> {
-        return getInstance().executeActionImmediate(REAPER_ACTIONS.GOTO_PREVIOUS_MARKER)
+        return getInstance().executeActionImmediate(
+          REAPER_ACTIONS.GOTO_PREVIOUS_MARKER
+        )
       },
 
       goToNextMarker(): Promise<void> {
-        return getInstance().executeActionImmediate(REAPER_ACTIONS.GOTO_NEXT_MARKER)
+        return getInstance().executeActionImmediate(
+          REAPER_ACTIONS.GOTO_NEXT_MARKER
+        )
       },
 
       async goToTime(position: number): Promise<void> {
@@ -371,7 +361,9 @@ const Bridge = {
       async getAll(): Promise<TrackStateResponse[] | null> {
         const reaper = getInstance()
         // We use sendCommand here to get the raw response text for multi-response parsing
-        const responseText = await reaper.sendCommand(REAPER_COMMANDS.TRACK_LIST)
+        const responseText = await reaper.sendCommand(
+          REAPER_COMMANDS.TRACK_LIST
+        )
         if (responseText === null) return null
         return parseMultiResponse(responseText, parseTrackResponse)
       },

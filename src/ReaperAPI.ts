@@ -21,7 +21,12 @@ import type {
   StateSubscriptionCallback,
 } from './StateSubscriptionManager.js'
 import { ReaperBridgeError, ReaperBridgeWarning } from './ReaperBridgeError.js'
-import { RESPONSE_TYPES } from './constants.js'
+import {
+  COMMAND_SEPARATOR,
+  GET_RESPONSE_NULL_FILTER,
+  RESPONSE_SEPARATOR,
+  RESPONSE_TYPES,
+} from './constants.js'
 
 export interface ConnectionInfo {
   host: string
@@ -166,12 +171,10 @@ export class ReaperAPI {
         try {
           const combinedCommand = batchedCommands
             .map((item) => item.command)
-            .join(';') // Reaper uses semicolon to separate commands
+            .join(COMMAND_SEPARATOR)
 
           const response = await this.sendCommandDirect(combinedCommand)
 
-          // For now, resolve all batched commands with the same response
-          // TODO: Parse individual responses if Reaper returns them separated
           batchedCommands.forEach((item) => {
             item.resolve(response)
           })
@@ -252,7 +255,10 @@ export class ReaperAPI {
    * @param actionId - The action ID to execute
    * @param immediate - Whether to send immediately or queue for next poll
    */
-  async executeAction(actionId: REAPER_ACTIONS, immediate = false): Promise<void> {
+  async executeAction(
+    actionId: REAPER_ACTIONS,
+    immediate = false
+  ): Promise<void> {
     await this.sendCommand(actionId, immediate)
   }
 
@@ -419,8 +425,8 @@ export class ReaperAPI {
 
       if (pollingCommands.length > 0) {
         try {
-          // Send combined commands for efficiency (use semicolon separator)
-          const combinedCommand = pollingCommands.join(';')
+          // Send combined commands for efficiency
+          const combinedCommand = pollingCommands.join(COMMAND_SEPARATOR)
 
           const response = await this.sendCommandDirect(combinedCommand)
 
@@ -450,7 +456,9 @@ export class ReaperAPI {
     if (!response || response.trim() === '') return
 
     // Split response into lines and parse each
-    const responseLines = response.split('\n').filter((line) => line.trim())
+    const responseLines = response
+      .split(RESPONSE_SEPARATOR)
+      .filter((line) => line.trim())
     const parsedResponses = responseLines
       .map((line) => parseResponse(line))
       .filter((parsed): parsed is ParsedResponse => parsed !== null)
@@ -479,21 +487,20 @@ export class ReaperAPI {
 
       try {
         if (isMultiResponse) {
-          const filter = <T>() => (t: T | null): t is NonNullable<T> => t !== null
           if (command === RESPONSE_TYPES.TRACK) {
             const trackStates = responsesForCommand
               .map((r) => parseTrackResponse(r))
-              .filter(filter())
+              .filter(GET_RESPONSE_NULL_FILTER())
             this.stateManager.updateState('tracks', trackStates)
           } else if (command === RESPONSE_TYPES.MARKER) {
             const markerStates = responsesForCommand
               .map((r) => parseMarkerResponse(r))
-              .filter(filter())
+              .filter(GET_RESPONSE_NULL_FILTER())
             this.stateManager.updateState('markers', markerStates)
           } else if (command === RESPONSE_TYPES.REGION) {
             const regionStates = responsesForCommand
               .map((r) => parseRegionResponse(r))
-              .filter(filter())
+              .filter(GET_RESPONSE_NULL_FILTER())
             this.stateManager.updateState('regions', regionStates)
           }
         } else if (responsesForCommand.length > 0) {
@@ -562,7 +569,7 @@ export class ReaperAPI {
     if (pollingCommands.length > 0) {
       try {
         // Send combined commands for efficiency
-        const combinedCommand = pollingCommands.join(';')
+        const combinedCommand = pollingCommands.join(COMMAND_SEPARATOR)
         const response = await this.sendCommandDirect(combinedCommand)
 
         // Parse and distribute states to subscribers

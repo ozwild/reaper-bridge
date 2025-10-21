@@ -1,6 +1,25 @@
 export const APP_NAME = 'ReaperBridge'
 export const APP_VERSION = '0.1.0'
 
+/**
+ * Command separator for batching multiple commands in a single request
+ *
+ * Reference (from Reaper's main.js file used by it's default web server):
+ * All interaction with the server is done via
+ * wwr_req("command;command;command")
+ * or
+ * wwr_req_recur("command;command",interval):
+ * (which are internally sent as /_/command;command;command;command to the server)
+ */
+export const COMMAND_SEPARATOR = ';'
+
+export const RESPONSE_SEPARATOR = '\n'
+
+export const GET_RESPONSE_NULL_FILTER =
+  <T>() =>
+  (t: T | null): t is NonNullable<T> =>
+    t !== null
+
 export const REGULAR_EXPRESSIONS = {
   QUOTES: /^"|"$/g, // Matches leading and trailing quotes,
   DELTA_SEND: /^([+-]?\d+(\.\d+)?)([eE])?$/, // Matches delta send values like +0.1e or -0.1E

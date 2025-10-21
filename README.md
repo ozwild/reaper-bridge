@@ -44,7 +44,7 @@ Bridge.unsubscribe(id)
 
 ```typescript
 // Main import (TypeScript)
-import { Bridge, ACTION_ID, NAMED_ACTION } from '@ozwild/reaper-bridge'
+import { Bridge, REAPER_ACTIONS, REAPER_COMMANDS } from '@ozwild/reaper-bridge'
 
 // CommonJS (Node.js)
 const { Bridge } = require('@ozwild/reaper-bridge')
@@ -135,7 +135,7 @@ console.log('Connected:', Bridge.isConnected())
 const unsubscribeTransport = Bridge.subscribeToState('transport', (state) => {
   if (state) {
     console.log('Transport:', state.isPlaying ? 'Playing' : 'Stopped')
-    console.log('Position:', state.positionSeconds)
+    console.log('Position:', state.position.seconds)
   }
 })
 
@@ -263,14 +263,14 @@ Subscribe to specific state updates with fine-grained control.
 // Subscribe to transport state changes
 const unsubscribe = Bridge.subscribeToState('transport', (state) => {
   if (state) {
-    console.log(`Playing: ${state.isPlaying}, Position: ${state.positionSeconds}`)
+    console.log(`Playing: ${state.isPlaying}, Position: ${state.position.seconds}`)
   }
 })
 
 // Subscribe to track changes
 const unsubscribeTracks = Bridge.subscribeToState('tracks', (tracks) => {
   tracks?.forEach((track, i) => {
-    console.log(`Track ${i + 1}: Muted: ${track.mute}, Solo: ${track.solo}`)
+    console.log(`Track ${i + 1}: Muted: ${track.isMuted}, Solo: ${track.isSoloed}`)
   })
 })
 
@@ -286,11 +286,11 @@ unsubscribeMarkers()
 ```
 
 **Available State Types:**
-- `'transport'` - Transport state (play, stop, position, BPM)
+- `'transport'` - Transport state (play, stop, position)
 - `'tracks'` - All track states (mute, solo, volume, etc.)  
 - `'markers'` - Project markers
 - `'regions'` - Project regions
-- `'beat'` - Beat position information
+- `'beat'` - Beat position information and time signature
 
 ##### `Bridge.getCurrentState(stateType)` → `StateData | null`
 
@@ -337,7 +337,7 @@ Commands are sent to Reaper instantly when called. Use for:
 await Bridge.actions.transport.play()
 
 // Explicitly request immediate execution
-await Bridge.requests.executeAction(ACTION_ID.PLAY, true)
+await Bridge.requests.executeAction(REAPER_ACTIONS.PLAY, true)
 ```
 
 ### Queued Execution  
@@ -349,10 +349,10 @@ Commands are batched and sent during the next polling cycle. Use for:
 
 ```typescript
 // Default behavior for Bridge.requests methods
-await Bridge.requests.executeAction(ACTION_ID.SOME_BACKGROUND_ACTION)
+await Bridge.requests.executeAction(REAPER_ACTIONS.SOME_BACKGROUND_ACTION)
 
 // Explicitly queue (immediate = false)
-await Bridge.requests.executeAction(ACTION_ID.SOME_ACTION, false)
+await Bridge.requests.executeAction(REAPER_ACTIONS.SOME_ACTION, false)
 ```
 
 ### Benefits
@@ -419,7 +419,7 @@ await Bridge.actions.tracks.toggleSolo(1)
 await Bridge.actions.project.load('C:/Path/To/Project.rpp')
 ```
 
-**Note:** Project loading requires Osworks.lua script loaded in Reaper with OSC mapping to `/osworks`.
+**Note:** Project loading requires ReaperBridge.lua script loaded in Reaper with OSC mapping to `/osworks`.
 
 #### Requests
 
@@ -442,13 +442,13 @@ const response = await Bridge.requests.sendCommand('TRANSPORT', true)
 Execute a Reaper action by ID (fire-and-forget).
 
 ```typescript
-import { ACTION_ID } from '@ozwild/reaper-bridge'
+import { REAPER_ACTIONS } from '@ozwild/reaper-bridge'
 
 // Queued execution (default)
-await Bridge.requests.executeAction(ACTION_ID.PLAY)
+await Bridge.requests.executeAction(REAPER_ACTIONS.PLAY)
 
 // Immediate execution
-await Bridge.requests.executeAction(ACTION_ID.PLAY, true)
+await Bridge.requests.executeAction(REAPER_ACTIONS.PLAY, true)
 ```
 
 ##### `Bridge.requests.executeCommand(command, immediate?)` → `Promise<void>`
@@ -456,13 +456,13 @@ await Bridge.requests.executeAction(ACTION_ID.PLAY, true)
 Execute a complex command (fire-and-forget).
 
 ```typescript
-import { NAMED_ACTION } from '@ozwild/reaper-bridge'
+import { REAPER_COMMANDS } from '@ozwild/reaper-bridge'
 
 // Queued execution
-await Bridge.requests.executeCommand(NAMED_ACTION.POSITION_GOTO_SECONDS(120))
+await Bridge.requests.executeCommand(REAPER_COMMANDS.POSITION_GOTO_SECONDS(120))
 
 // Immediate execution
-await Bridge.requests.executeCommand(NAMED_ACTION.POSITION_GOTO_SECONDS(120), true)
+await Bridge.requests.executeCommand(REAPER_COMMANDS.POSITION_GOTO_SECONDS(120), true)
 ```
 
 ##### `Bridge.requests.requestData(command)` → `Promise<ParsedResponse | null>`
@@ -673,15 +673,15 @@ await Bridge.actions.project.load('C:/Music/MySong.rpp')
 ### Immediate vs Queued Execution
 
 ```typescript
-import { Bridge, ACTION_ID, NAMED_ACTION } from '@ozwild/reaper-bridge'
+import { Bridge, REAPER_ACTIONS, REAPER_COMMANDS } from '@ozwild/reaper-bridge'
 
 // Immediate execution for responsive UI
 await Bridge.actions.transport.play()  // Always immediate
-await Bridge.requests.executeAction(ACTION_ID.STOP, true)  // Explicit immediate
+await Bridge.requests.executeAction(REAPER_ACTIONS.STOP, true)  // Explicit immediate
 
 // Queued execution for efficiency
-await Bridge.requests.executeAction(ACTION_ID.SOME_BACKGROUND_ACTION)  // Default queued
-await Bridge.requests.executeCommand(NAMED_ACTION.TRACK_SET_VOLUME(1, 0.8), false)  // Explicit queued
+await Bridge.requests.executeAction(REAPER_ACTIONS.SOME_BACKGROUND_ACTION)  // Default queued
+await Bridge.requests.executeCommand(REAPER_COMMANDS.TRACK_SET_VOLUME(1, 0.8), false)  // Explicit queued
 
 // Mixed workflow - immediate user actions, queued bulk operations
 async function handleUserPlayback() {
@@ -765,11 +765,11 @@ const unsubscribe = Bridge.subscribeToState('transport', callback)
 ```
 
 **Available States:**
-- `transport` - Play state, position, BPM
+- `transport` - Play state, position
 - `tracks` - Track mute/solo/volume states  
 - `markers` - Project markers
 - `regions` - Project regions
-- `beat` - Beat position information
+- `beat` - Beat position information and time signature
 
 ---
 

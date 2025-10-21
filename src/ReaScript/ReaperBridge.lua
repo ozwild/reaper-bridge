@@ -1,56 +1,35 @@
 -- @description Open the project specified by argument
--- @name Osworks Tools
+-- @name ReaperBridge: Open Project via OSC
+-- @author Ozwild
+-- @version 1.0
 -- This script opens a project via OSC with a string argument (project path)
 
 --[[
-This script provides Web Surface functionality that extends REAPER's out-of-the-box capabilities, by a combination of OSC messages and external states.
+This script provides Web Surface functionality that extends REAPER's out-of-the-box capabilities.
 
-The process is a 2 step operation:
-
-1. The desired operation is prepared by providing arguments via "SetExtState" calls,
-
-2. and then executed by sending an OSC message to REAPER with the operation ID as argument.
+To use this script, you need to send an OSC message from your web surface client with the operationId and argument specified below.
 
 Example:
-From your web surface client, send a GET http message with: `SET/EXTSTATE/osworks/project_path/${encodeURIComponent( projectPath )}`
 
-Followed by an OSC message with the operationId: `OSC/osworks/1`
+`OSC/reaper_bridge:sopen_project|C:/Path/To/Project.rpp`
+
+Where:
+`reaper_bridge` is the osc address,  
+`open_project` is the operationId, 
+s is the argument type (string) and 
+`C:/Path/To/Project.rpp` is the argument (project path)
 
 
 Requirements:
 
 - Map this script to a osc address via the action list
 
-In the example above we asume that the osc address is: osworks
+In the example above we asume that the osc address has been mapped to `osc:/reaper_bridge`
 
-Available operations:
-
-1) Open project (operationId = 1)
-  Opens the project specified by `project_path`
-  argument: project_path
-  type: string
 ]]
 reaper.ClearConsole()
 
 -- Helper functions
-
-local function log(...)
-    local concatenated = ""
-    for _, s in ipairs({...}) do
-        if s ~= nil then
-            concatenated = concatenated .. s .. "\n"
-        end
-    end
-    reaper.ShowConsoleMsg(concatenated)
-end
-
-local function normalizePath(path)
-    if reaper.GetOS():match("Win") then
-        return path:gsub("/", "\\")
-    else
-        return path:gsub("\\", "/")
-    end
-end
 
 local function getOSCArgument()
     local is_new, name, sec, cmd, rel, res, val, ctx = reaper.get_action_context()
@@ -79,20 +58,18 @@ local function getOSCArgument()
     return nil
 end
 
---------------------------------------------------------------------------
---------      Meat and potatoes    ---------------------------------------
---------------------------------------------------------------------------
+-- Application definition
 
 local app = {
-    name = "Osworks Tools",
-    namespace = "osworks",
+    name = "ReaperBridge",
+    namespace = "reaper_bridge",
     supportedActions = {
         {
             id = "open_project",
             description = "Open the project specified by argument",
             handle = function(projectPath)
                 if projectPath then
-                reaper.Main_openProject("noprompt:" .. projectPath)
+                    reaper.Main_openProject("noprompt:" .. projectPath)
                 end
             end
         }
