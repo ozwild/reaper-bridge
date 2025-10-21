@@ -1,83 +1,76 @@
 # reaper-bridge
 
-**A JavaScript/React bridge for controlling Reaper DAW via Web Control Surface**
+**A TypeScript library for controlling Reaper DAW via Web Control Surface**
 
 [![npm version](https://img.shields.io/npm/v/@ozwild/reaper-bridge.svg)](https://www.npmjs.com/package/@ozwild/reaper-bridge)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![React](https://img.shields.io/badge/React-18%2B-61DAFB?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5%2B-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 
 ---
 
-## Import Patterns
+## Quick Start
 
-The package provides multiple import options for different use cases:
+```typescript
+import { Bridge } from '@ozwild/reaper-bridge'
 
-### Main Bundle (Recommended)
+// Initialize connection to Reaper
+Bridge.init({
+  connection: {
+    host: 'localhost',
+    port: 8080
+  }
+})
 
-```javascript
-// Import everything (Bridge + useReaper)
-import { Bridge, useReaper } from '@ozwild/reaper-bridge'
+// Use actions
+await Bridge.actions.transport.play()
+await Bridge.actions.transport.stop()
 
-// Use Bridge for vanilla JS
-Bridge.init({ connection: { host: 'localhost', port: 8080 } })
+// Subscribe to events
+const id = Bridge.subscribe({
+  onConnectionChange: (connected) => console.log('Connected:', connected),
+  onTransport: (state) => console.log('Transport:', state)
+})
 
-// Use useReaper hook in React components
-function MyComponent() {
-  const { actions, isConnected } = useReaper()
-  // ...
-}
+// Cleanup
+Bridge.unsubscribe(id)
 ```
 
-### Bridge Only (Vanilla JS)
+### Import Options
 
-```javascript
-// Import only Bridge (smaller bundle for non-React apps)
-import { Bridge } from '@ozwild/reaper-bridge/Bridge'
+```typescript
+// Main import (TypeScript)
+import { Bridge, ACTION_ID, NAMED_ACTION } from '@ozwild/reaper-bridge'
 
-Bridge.init(config)
-```
-
-### Legacy Support
-
-```javascript
 // CommonJS (Node.js)
-const { Bridge, useReaper } = require('@ozwild/reaper-bridge')
+const { Bridge } = require('@ozwild/reaper-bridge')
 
-// ESM with dynamic import
-const { Bridge } = await import('@ozwild/reaper-bridge')
+// Bridge only (smaller bundle)
+import { Bridge } from '@ozwild/reaper-bridge/Bridge'
 ```
-
-### Bundle Information
-
-- **Main bundle**: `~7.3KB` minified (Bridge + useReaper)
-- **Bridge only**: `~6.3KB` minified (vanilla JS)
-- **Formats**: ESM + CommonJS
-- **Target**: Modern browsers + Node.js 18+
-- **Tree-shakable**: Import only what you need
 
 ---
 
-## Architecture Overview
+## Overview
 
-**reaper-bridge** is a JavaScript library that provides a clean, modern API for controlling [Reaper DAW](https://www.reaper.fm/) from web applications. It leverages Reaper's built-in Web Control Surface to enable remote control over HTTP.
+**reaper-bridge** is a TypeScript library that provides a clean, modern API for controlling [Reaper DAW](https://www.reaper.fm/) from JavaScript applications. It leverages Reaper's built-in Web Control Surface to enable remote control over HTTP.
 
 ### Key Features
 
-- 🎯 **Singleton Pattern** - Single shared instance across your entire application
-- 🔄 **Subscription System** - Efficient event broadcasting to multiple components
-- ⚛️ **React Hook** - `useReaper()` hook for seamless React integration
-- 🎛️ **4 Communication Channels** - Actions, Properties, ExtState, and OSC
-- 🚀 **Factory Methods** - Simple initialization and configuration
-- 📡 **Auto-Polling** - Automatic transport state updates with smart lifecycle management
-- 🔌 **Connection Management** - Auto-reconnect and failure handling
-- 📝 **Type-Safe** - Comprehensive PropTypes for React components
+- 🎯 **Singleton Pattern** - Single shared instance across your application
+- 🔄 **Event System** - Subscribe to connection and transport state changes
+- 🎛️ **Multiple APIs** - Actions, commands, ExtState, and OSC support
+- 🚀 **Simple API** - Easy initialization and configuration
+- 📡 **Transport Polling** - Automatic transport state updates
+- 🔌 **Connection Management** - Connection state tracking and error handling
+- 📝 **TypeScript** - Full type definitions included
+- 🌐 **Framework Agnostic** - Works with any JavaScript framework
 
 ### Use Cases
 
 - **Web-based DAW controllers** - Build custom control interfaces
 - **Live performance tools** - Control Reaper from tablets/phones
 - **Studio automation** - Remote control from recording booth
-- **Custom workflows** - Integrate Reaper into your web apps
+- **Custom workflows** - Integrate Reaper into your applications
 
 ---
 
@@ -92,16 +85,13 @@ yarn add @ozwild/reaper-bridge
 ### Requirements
 
 - **Node.js**: 18.0.0 or higher
-- **React**: 18.0.0 or higher (optional, only needed for `useReaper` hook)
 - **Reaper DAW** with Web Control Surface enabled
 
 ### Build Output
 
-The package provides optimized, minified builds:
-- **ESM** (`dist/*.esm.js`) - For modern bundlers (Vite, Webpack 5, Rollup)
-- **CommonJS** (`dist/*.cjs.js`) - For Node.js and older bundlers
-- **Source maps** included for debugging
-- **Tree-shakable** - Import only what you need
+- **ESM** (`dist/*.esm.js`) - For modern bundlers and browsers
+- **CommonJS** (`dist/*.cjs.js`) - For Node.js compatibility
+- **TypeScript declarations** (`dist/*.d.ts`) - Full type support
 
 ---
 
@@ -116,22 +106,12 @@ The package provides optimized, minified builds:
 5. Check "Allow access from other computers"
 6. Click OK
 
-### 2. Vanilla JavaScript Usage
+### 2. Basic Usage
 
-```javascript
+```typescript
 import { Bridge } from '@ozwild/reaper-bridge'
 
-const bridge = Bridge.getInstance()
-console.log('Bridge ready:', bridge.isReady())
-
-### 3. React Usage
-
-```jsx
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { Bridge, useReaper } from '@ozwild/reaper-bridge'
-
-// Initialize Bridge BEFORE React renders
+// Initialize with connection settings
 Bridge.init({
   connection: {
     host: 'localhost',
@@ -141,32 +121,35 @@ Bridge.init({
   }
 })
 
-function TransportControls() {
-  const {
-    isConnected,
-    transportState,
-    actions,
-    error
-  } = useReaper()
+// Check if ready and connected
+console.log('Bridge ready:', Bridge.isReady())
+console.log('Connected:', Bridge.isConnected())
 
-  if (!isConnected) {
-    return <div>Not connected to Reaper</div>
+// Subscribe to events
+const id = Bridge.subscribe({
+  onConnectionChange: (connected) => {
+    console.log('Connection status:', connected)
+  },
+  onTransport: (state) => {
+    console.log('Transport:', state.isPlaying ? 'Playing' : 'Stopped')
+    console.log('Position:', state.positionSeconds)
+  },
+  onError: (error) => {
+    console.error('Reaper error:', error.message)
   }
+})
 
-  return (
-    <div>
-      <p>Status: {transportState.isPlaying ? 'Playing' : 'Stopped'}</p>
-      <p>Position: {transportState.positionSeconds}</p>
-      <button onClick={actions.transport.play}>Play</button>
-      <button onClick={actions.transport.stop}>Stop</button>
-      <button onClick={actions.transport.record}>Record</button>
-      {error && <p>Error: {error}</p>}
-    </div>
-  )
-}
+// Control transport
+await Bridge.actions.transport.play()
+await Bridge.actions.transport.stop()
+await Bridge.actions.transport.record()
 
-// Render your app
-ReactDOM.createRoot(document.getElementById('root')).render(<TransportControls />)
+// Get transport state manually
+const state = await Bridge.actions.transport.getState()
+console.log('Current state:', state)
+
+// Cleanup when done
+Bridge.unsubscribe(id)
 ```
 
 ---
@@ -240,7 +223,7 @@ if (Bridge.isConnected()) {
 
 Subscribe to Bridge events. Returns subscription ID for cleanup.
 
-```javascript
+```typescript
 const id = Bridge.subscribe({
   onConnectionChange: (isConnected) => {
     console.log('Connection:', isConnected)
@@ -254,30 +237,11 @@ const id = Bridge.subscribe({
 })
 ```
 
-**Handler Parameters:**
+**Event Handlers:**
 
 - `onConnectionChange(isConnected: boolean)` - Connection state changes
-- `onError(error: Error, failureCount: number)` - Error occurred
-- `onTransport(state: object)` - Transport state update
-
-**Transport State Object:**
-```javascript
-{
-  playstate: 0,           // 0=stopped, 1=playing, 2=paused, 5=recording
-  positionSeconds: '...',  // Time format (mm:ss.ms)
-  positionBars: '...',     // Musical time (measures.beats.ticks)
-  bpm: 120.00,            // Current tempo
-  isPlaying: false,       // Convenience boolean
-  isRecording: false,     // Convenience boolean
-  isLooping: false,       // Convenience boolean
-  position: {             // Parsed position
-    seconds: 0,
-    measures: 1,
-    beats: 1,
-    ticks: 0
-  }
-}
-```
+- `onError(error: Error, failureCount: number)` - Error occurred  
+- `onTransport(state: TransportStateResponse)` - Transport state update
 
 ##### `Bridge.unsubscribe(id)` → `void`
 
@@ -303,13 +267,13 @@ High-level action methods for common Reaper operations.
 
 ##### Transport
 
-```javascript
+```typescript
 // Playback control
-await Bridge.actions.transport.play()      // Start playback
-await Bridge.actions.transport.pause()     // Pause
-await Bridge.actions.transport.stop()      // Stop + go to start
-await Bridge.actions.transport.playPause() // Toggle play/pause
-await Bridge.actions.transport.record()    // Toggle recording
+await Bridge.actions.transport.play()       // Start playback
+await Bridge.actions.transport.pause()      // Pause
+await Bridge.actions.transport.stop()       // Stop + go to start
+await Bridge.actions.transport.playPause()  // Toggle play/pause
+await Bridge.actions.transport.record()     // Toggle recording
 await Bridge.actions.transport.toggleLoop() // Toggle repeat
 
 // Get transport state
@@ -318,21 +282,36 @@ const state = await Bridge.actions.transport.getState()
 
 ##### Position
 
-```javascript
+```typescript
 await Bridge.actions.position.goToStart()
 await Bridge.actions.position.goToPreviousMarker()
 await Bridge.actions.position.goToNextMarker()
+await Bridge.actions.position.goToTime(120.5) // Go to specific time in seconds
 ```
 
 ##### Master
 
-```javascript
-await Bridge.actions.master.mute()  // Toggle master mute
+```typescript
+await Bridge.actions.master.toggleMute() // Toggle master mute
+```
+
+##### Tracks
+
+```typescript
+// Get all tracks
+const tracks = await Bridge.actions.tracks.getAll()
+
+// Get specific track
+const track = await Bridge.actions.tracks.getTrack(1)
+
+// Control track
+await Bridge.actions.tracks.toggleMute(1)
+await Bridge.actions.tracks.toggleSolo(1)
 ```
 
 ##### Project
 
-```javascript
+```typescript
 // Load a project file
 await Bridge.actions.project.load('C:/Path/To/Project.rpp')
 ```
@@ -343,170 +322,131 @@ await Bridge.actions.project.load('C:/Path/To/Project.rpp')
 
 Low-level request methods for direct Reaper API access.
 
-##### `Bridge.requests.command(cmd)` → `Promise<string>`
+##### `Bridge.requests.sendCommand(cmd)` → `Promise<string>`
 
 Send a raw command to Reaper.
 
-```javascript
-const response = await Bridge.requests.command('TRANSPORT')
+```typescript
+const response = await Bridge.requests.sendCommand('TRANSPORT')
 ```
 
-##### `Bridge.requests.action(actionId)` → `Promise<string>`
+##### `Bridge.requests.action(actionId)` → `Promise<void>`
 
 Execute a Reaper action by ID.
 
-```javascript
-await Bridge.requests.action('40044')  // Play action
-await Bridge.requests.action(1016)     // Stop action (numeric also works)
+```typescript
+import { ACTION_ID } from '@ozwild/reaper-bridge'
+
+await Bridge.requests.action(ACTION_ID.PLAY)
+await Bridge.requests.action(ACTION_ID.STOP)
+```
+
+##### `Bridge.requests.namedAction(action)` → `Promise<ParsedResponse | null>`
+
+Execute a named action with parameters.
+
+```typescript
+import { NAMED_ACTION } from '@ozwild/reaper-bridge'
+
+await Bridge.requests.namedAction(NAMED_ACTION.POSITION_GOTO_SECONDS(120))
 ```
 
 ##### ExtState
 
 Get/set external state values for ReaScript communication.
 
-```javascript
+```typescript
 // Set a value
 await Bridge.requests.extState.set('myapp', 'key', 'value')
 
 // Get a value
-const value = await Bridge.requests.extState.get('myapp', 'key')
+const response = await Bridge.requests.extState.get('myapp', 'key')
+console.log(response?.value) // The stored value
 ```
 
 ##### OSC
 
 Trigger OSC-mapped ReaScripts.
 
-```javascript
-await Bridge.requests.OSC.trigger('osworks', 'argument', false)
+```typescript
+await Bridge.requests.OSC.trigger('osworks', 'argument', true)
 ```
 
 #### Connection
 
-##### `Bridge.connection.update(host, port)` → `void`
+##### Connection
 
-Update connection settings.
+```typescript
+// Update connection settings
+Bridge.actions.connection.update('192.168.1.50', '8080')
 
-```javascript
-Bridge.connection.update('192.168.1.50', 8080)
-```
+// Get current connection information
+const info = Bridge.actions.connection.getInfo()
+// { host: '...', port: '...', baseUrl: '...', isConnected: true }
 
-##### `Bridge.connection.getInfo()` → `object`
-
-Get current connection information.
-
-```javascript
-const info = Bridge.connection.getInfo()
-// { host: '...', port: ..., baseUrl: '...', isConnected: true }
-```
-
-##### `Bridge.connection.test()` → `Promise<boolean>`
-
-Test connection to Reaper.
-
-```javascript
-const isReachable = await Bridge.connection.test()
+// Test connection to Reaper
+const isReachable = await Bridge.actions.connection.test()
 ```
 
 ---
 
-### React Hook: `useReaper()`
+### TypeScript Support
 
-React hook providing access to Bridge with automatic subscription management.
+The library is written in TypeScript and includes full type definitions:
 
-#### Usage
+```typescript
+import type { 
+  BridgeConfig, 
+  EventHandlers,
+  TransportStateResponse,
+  TrackStateResponse 
+} from '@ozwild/reaper-bridge'
 
-```jsx
-import { useReaper } from '@ozwild/reaper-bridge/React'
+const config: BridgeConfig = {
+  connection: {
+    host: 'localhost',
+    port: '8080',
+    pollingInterval: 250,
+    failureThreshold: 3
+  }
+}
 
-function MyComponent() {
-  const {
-    // State
-    isConnected,
-    transportState,
-    error,
-    
-    // All Bridge methods
-    actions,
-    requests,
-    connection,
-    
-    // Bridge API
-    subscribe,
-    unsubscribe,
-    ...rest
-  } = useReaper()
-
-  // Optional: custom event handlers
-  const {
-    isConnected,
-    transportState
-  } = useReaper({
-    onConnectionChange: (connected) => {
-      console.log('Connection changed:', connected)
-    },
-    onError: (err) => {
-      console.error('Reaper error:', err)
-    },
-    onTransport: (state) => {
-      console.log('Transport update:', state)
-    }
-  })
-
-  return (
-    <div>
-      {isConnected ? 'Connected' : 'Disconnected'}
-      <button onClick={actions.transport.play}>Play</button>
-    </div>
-  )
+const handlers: EventHandlers = {
+  onTransport: (state: TransportStateResponse) => {
+    console.log(state.isPlaying)
+  }
 }
 ```
-
-#### Return Value
-
-The hook returns an object containing:
-
-**State:**
-- `isConnected` (boolean) - Connection status
-- `transportState` (object) - Current transport state
-- `error` (string|null) - Current error message
-
-**Bridge API:**
-- `actions` - All action methods
-- `requests` - All request methods
-- `connection` - Connection management methods
-- All other Bridge methods
-
-#### Lifecycle
-
-- **Mount:** Subscribes to Bridge events, starts polling if first subscriber
-- **Update:** Updates subscription handlers when props change
-- **Unmount:** Unsubscribes, stops polling if last subscriber
 
 ---
 
 ## Configuration
 
-### Default Configuration
+### Configuration Options
 
-```javascript
-{
+```typescript
+interface BridgeConfig {
   connection: {
-    host: '192.168.1.36',
-    port: 8080,
-    failureThreshold: 3,
-    pollingInterval: 500    // milliseconds
+    host: string           // Reaper machine IP address
+    port: string           // Web Control Surface port  
+    pollingInterval: number // Transport polling rate (ms)
+    failureThreshold: number // Failures before marking disconnected
   }
 }
 ```
 
-### Configuration Options
+### Default Configuration
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `connection.host` | string | `'192.168.1.36'` | Reaper machine IP address |
-| `connection.port` | number | `8080` | Web Control Surface port |
-| `connection.pollingInterval` | number | `500` | Transport polling rate (ms) |
-| `connection.failureThreshold` | number | `3` | Failures before marking disconnected |
+```typescript
+{
+  connection: {
+    host: '192.168.1.36',
+    port: '8080',
+    failureThreshold: 3,
+    pollingInterval: 1000
+  }
+}
+```
 
 ---
 
@@ -514,10 +454,15 @@ The hook returns an object containing:
 
 ### Basic Transport Control
 
-```javascript
-import Bridge from '@ozwild/reaper-bridge'
+```typescript
+import { Bridge } from '@ozwild/reaper-bridge'
 
-Bridge.init({ connection: { host: 'localhost', port: 8080 } })
+Bridge.init({ 
+  connection: { 
+    host: 'localhost', 
+    port: '8080' 
+  } 
+})
 
 // Play
 await Bridge.actions.transport.play()
@@ -531,96 +476,78 @@ await Bridge.actions.transport.stop()
 
 ### Monitor Transport State
 
-```javascript
+```typescript
 const id = Bridge.subscribe({
   onTransport: (state) => {
     if (state.isPlaying) {
       console.log(`Playing at ${state.positionSeconds}`)
     }
+  },
+  onConnectionChange: (connected) => {
+    console.log(`Connection: ${connected ? 'Connected' : 'Disconnected'}`)
   }
 })
 
-// Cleanup
+// Cleanup after 60 seconds
 setTimeout(() => Bridge.unsubscribe(id), 60000)
 ```
 
-### React Component with Error Handling
+### Working with Tracks
 
-```jsx
-function ReaperController() {
-  const { isConnected, transportState, actions, error } = useReaper()
-  const [loading, setLoading] = useState(false)
+```typescript
+// Get all tracks
+const tracks = await Bridge.actions.tracks.getAll()
+console.log(`Found ${tracks?.length || 0} tracks`)
 
-  const handlePlay = async () => {
-    setLoading(true)
-    try {
-      await actions.transport.play()
-    } catch (err) {
-      alert(`Failed to play: ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
+// Control specific track
+await Bridge.actions.tracks.toggleMute(1)  // Mute/unmute track 1
+await Bridge.actions.tracks.toggleSolo(2)  // Solo/unsolo track 2
 
-  return (
-    <div>
-      {!isConnected && <p style={{ color: 'red' }}>Not connected</p>}
-      {error && <p style={{ color: 'orange' }}>{error}</p>}
-      
-      <p>Status: {transportState.isPlaying ? 'Playing' : 'Stopped'}</p>
-      <p>Position: {transportState.positionSeconds}</p>
-      <p>BPM: {transportState.bpm}</p>
-      
-      <button onClick={handlePlay} disabled={loading || !isConnected}>
-        {loading ? 'Loading...' : 'Play'}
-      </button>
-    </div>
-  )
-}
+// Get track info
+const track = await Bridge.actions.tracks.getTrack(1)
+console.log(`Track 1 - Muted: ${track?.mute}, Solo: ${track?.solo}`)
 ```
 
-### Load Project with ExtState + OSC
+### Load Project with OSC
 
-```javascript
+```typescript
 // Requires Osworks.lua script in Reaper with OSC mapping
 await Bridge.actions.project.load('C:/Music/MySong.rpp')
 ```
 
-### Custom Action
+### Direct Commands
 
-```javascript
-// Execute any Reaper action by ID
-await Bridge.requests.action('40285')  // Go to previous track
+```typescript
+import { ACTION_ID, NAMED_ACTION } from '@ozwild/reaper-bridge'
+
+// Execute action by ID
+await Bridge.requests.action(ACTION_ID.PLAY)
+
+// Execute named action with parameters
+await Bridge.requests.namedAction(NAMED_ACTION.POSITION_GOTO_SECONDS(120))
+
+// Send raw command
+const response = await Bridge.requests.sendCommand('TRANSPORT')
 ```
 
-### Multiple Components Sharing State
+### Error Handling
 
-```jsx
-// All components share the same Bridge instance and subscription
-function PlayButton() {
-  const { actions } = useReaper()
-  return <button onClick={actions.transport.play}>Play</button>
-}
+```typescript
+const id = Bridge.subscribe({
+  onError: (error, failureCount) => {
+    console.error(`Error (${failureCount} failures):`, error.message)
+    
+    if (failureCount >= 3) {
+      console.log('Connection lost, attempting to reconnect...')
+      // Handle reconnection logic
+    }
+  }
+})
 
-function StopButton() {
-  const { actions } = useReaper()
-  return <button onClick={actions.transport.stop}>Stop</button>
-}
-
-function Position() {
-  const { transportState } = useReaper()
-  return <div>{transportState.positionSeconds}</div>
-}
-
-// Single polling loop serves all three components
-function App() {
-  return (
-    <>
-      <PlayButton />
-      <StopButton />
-      <Position />
-    </>
-  )
+try {
+  await Bridge.actions.transport.play()
+} catch (error) {
+  console.error('Failed to play:', error.message)
 }
 ```
 
@@ -630,42 +557,18 @@ function App() {
 
 ### Design Patterns
 
-**Singleton:** Single Bridge instance shared across entire application
-
-**Factory:** Bridge provides factory methods for initialization and configuration
-
-**Subscription:** Components subscribe to events, automatic lifecycle management
-
-**Polling:** Smart polling starts when first subscriber added, stops when last removed
+- **Singleton:** Single Bridge instance shared across entire application
+- **Event System:** Subscribe to connection and transport state changes
+- **Automatic Polling:** Transport state polling starts/stops based on subscribers
 
 ### Communication Channels
 
-reaper-bridge leverages Reaper's 4 communication channels:
+reaper-bridge uses Reaper's Web Control Surface endpoints:
 
-1. **Action Commands** (`/_/{actionID}`) - Execute discrete actions
-2. **Property Control** (`/_/SET|GET/{property}`) - Read/write properties
+1. **Action Commands** (`/_/{actionID}`) - Execute Reaper actions
+2. **Named Commands** (`/_/{command}`) - Execute commands with parameters  
 3. **External State** (`/_/SET|GET/EXTSTATE/{ns}/{key}`) - Data storage
 4. **OSC Triggers** (`/_/OSC/{address}`) - Trigger ReaScripts
-
-### Subscription Lifecycle
-
-```
-Component 1 mounts
-  → Subscribes
-  → Starts polling (first subscriber)
-
-Component 2 mounts
-  → Subscribes
-  → Polling already active
-
-Component 1 unmounts
-  → Unsubscribes
-  → Polling continues (Component 2 still subscribed)
-
-Component 2 unmounts
-  → Unsubscribes
-  → Stops polling (last subscriber)
-```
 
 ---
 
@@ -674,18 +577,17 @@ Component 2 unmounts
 ### Runtime Requirements
 
 - **Node.js:** 18+
-- **React:** 18+ (if using React hook)
-- **Browser:** Modern browser with Fetch API
+- **Browser:** Modern browser with Fetch API support
 
 ### Reaper Requirements
 
-- **Reaper:** 6.0+ (tested on 6.13+)
+- **Reaper:** 6.0+ (tested with 6.13+)
 - **Web Control Surface:** Enabled on port 8080 (or configured port)
 - **Network:** Reaper and client on same network (or accessible via IP)
 
 ### Optional Dependencies
 
-- **Osworks.lua:** Required for project loading feature (included in soloist)
+- **Osworks.lua:** Required for project loading feature
 
 ---
 
@@ -718,53 +620,36 @@ await Bridge.actions.transport.play()
 curl http://localhost:8080/_/TRANSPORT
 ```
 
-### React Hook Warning
-
-**Warning:** "useReaper: Bridge not initialized"
-
-**Solution:** Call `Bridge.init()` before rendering React components:
-
-```javascript
-// App entry point (main.jsx or index.js)
-import Bridge from '@ozwild/reaper-bridge'
-
-Bridge.init(config)  // Initialize FIRST
-
-// Then render React
-ReactDOM.createRoot(document.getElementById('root')).render(<App />)
-```
-
 ### Polling Not Starting
 
-**Cause:** No subscribers
+**Cause:** No subscribers registered
 
-**Solution:** Ensure at least one component calls `Bridge.subscribe()` or uses `useReaper()` hook
+**Solution:** Ensure at least one subscriber is active:
+
+```typescript
+const id = Bridge.subscribe({
+  onTransport: (state) => console.log(state)
+})
+```
 
 ### Memory Leaks
 
 **Cause:** Forgetting to unsubscribe
 
-**Solution:** Always unsubscribe in cleanup:
+**Solution:** Always unsubscribe when done:
 
-```javascript
-// Vanilla JS
+```typescript
 const id = Bridge.subscribe(handlers)
-// Later:
-Bridge.unsubscribe(id)
 
-// React (automatic)
-useReaper()  // Automatically unsubscribes on unmount
+// Later - cleanup
+Bridge.unsubscribe(id)
 ```
 
 ---
 
 ## API Documentation
 
-For detailed API documentation, see:
-
-- [API.md](docs/API.md) - Complete API reference
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical architecture
-- [EXAMPLES.md](docs/EXAMPLES.md) - More code examples
+See the TypeScript definitions for complete API reference.
 
 ---
 
@@ -780,6 +665,12 @@ cd reaper-bridge
 # Install dependencies
 yarn install
 
+# Build
+yarn build
+
+# Type check
+yarn type-check
+
 # Lint
 yarn lint
 
@@ -787,9 +678,29 @@ yarn lint
 yarn format
 ```
 
+### Versioning Workflow
+
+This project uses automated semantic versioning. Before committing changes that affect the API:
+
+```bash
+# Create a change file for your modifications
+yarn change
+```
+
+Git hooks will automatically:
+- Run type checking and linting before commits
+- Verify change files exist before pushes (for code changes)
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed workflow information.
+
 ### Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Follow the development workflow in [DEVELOPMENT.md](DEVELOPMENT.md)
+4. Submit a pull request
 
 ---
 
@@ -803,7 +714,7 @@ See [LICENSE](LICENSE) file for details.
 
 ## Related Projects
 
-- **[soloist](https://github.com/yourusername/soloist)** - Web app using reaper-bridge for live performance control
+- **[soloist](https://github.com/ozwild/soloist)** - Web app built with reaper-bridge for live performance control
 
 ---
 
@@ -817,8 +728,8 @@ See [LICENSE](LICENSE) file for details.
 
 ## Links
 
-- **Repository:** [github.com/yourusername/reaper-bridge](https://github.com/yourusername/reaper-bridge)
-- **Issues:** [github.com/yourusername/reaper-bridge/issues](https://github.com/yourusername/reaper-bridge/issues)
+- **Repository:** [github.com/ozwild/reaper-bridge](https://github.com/ozwild/reaper-bridge)
+- **Issues:** [github.com/ozwild/reaper-bridge/issues](https://github.com/ozwild/reaper-bridge/issues)
 - **npm:** [@ozwild/reaper-bridge](https://www.npmjs.com/package/@ozwild/reaper-bridge)
 - **Reaper:** [reaper.fm](https://www.reaper.fm/)
 
@@ -830,8 +741,8 @@ See [LICENSE](LICENSE) file for details.
 
 1. Check [Troubleshooting](#troubleshooting) section
 2. Read [API documentation](docs/API.md)
-3. Search [existing issues](https://github.com/yourusername/reaper-bridge/issues)
-4. Open a [new issue](https://github.com/yourusername/reaper-bridge/issues/new)
+3. Search [existing issues](https://github.com/ozwild/reaper-bridge/issues)
+4. Open a [new issue](https://github.com/ozwild/reaper-bridge/issues/new)
 
 **Found a Bug?**
 

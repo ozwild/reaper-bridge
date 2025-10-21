@@ -1,0 +1,2 @@
+# Check if change files are needed before pushing
+npm run change:check
