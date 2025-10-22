@@ -23,6 +23,7 @@ This file provides context to GitHub Copilot about the reaper-bridge project arc
 - 🌐 **Framework Agnostic** - Works with any JavaScript framework
 
 ### Tech Stack
+
 - **TypeScript 5** - Type-safe development
 - **Rollup** - ESM/CommonJS dual build output
 - **Beachball** - Automated semantic versioning
@@ -63,6 +64,7 @@ const unsubscribe = Bridge.subscribeToState('transport', callback)
 ```
 
 **Available States:**
+
 - `transport` - Play state, position
 - `tracks` - Track mute/solo/volume states
 - `markers` - Project markers
@@ -76,6 +78,7 @@ const unsubscribe = Bridge.subscribeToState('transport', callback)
 ### TypeScript Patterns
 
 **Strict typing with branded types:**
+
 ```typescript
 // Use branded types for domain-specific values
 type Volume = number // 0.0 to 1.0
@@ -92,6 +95,7 @@ export const REAPER_COMMANDS = {
 ```
 
 **Interface segregation:**
+
 ```typescript
 // Separate interfaces for different concerns
 export interface BridgeConfig {
@@ -112,6 +116,7 @@ export interface EventHandlers {
 ### Class Structure
 
 **Singleton with private constructor:**
+
 ```typescript
 export class ReaperAPI {
   private constructor(config?: ReaperAPIConfig) {
@@ -126,6 +131,7 @@ export class ReaperAPI {
 ```
 
 **Composition over inheritance:**
+
 ```typescript
 export class ReaperAPI {
   private stateManager = new StateSubscriptionManager()
@@ -144,16 +150,23 @@ export class ReaperAPI {
 ### Error Handling
 
 **Custom error types:**
+
 ```typescript
 export class ReaperBridgeError extends Error {
-  constructor(message: string, public readonly code?: string) {
+  constructor(
+    message: string,
+    public readonly code?: string
+  ) {
     super(message)
     this.name = 'ReaperBridgeError'
   }
 }
 
 export class ReaperBridgeWarning extends Error {
-  constructor(message: string, public readonly context?: unknown) {
+  constructor(
+    message: string,
+    public readonly context?: unknown
+  ) {
     super(message)
     this.name = 'ReaperBridgeWarning'
   }
@@ -161,6 +174,7 @@ export class ReaperBridgeWarning extends Error {
 ```
 
 **Graceful degradation:**
+
 ```typescript
 try {
   const response = await this.sendCommandDirect(command)
@@ -224,9 +238,13 @@ await Bridge.requests.executeAction(REAPER_ACTIONS.SOME_ACTION, false)
 ### State Subscription Manager
 
 **Fine-grained subscriptions:**
+
 ```typescript
 export class StateSubscriptionManager {
-  private subscriptions = new Map<StateType, Set<StateSubscriptionCallback<any>>>()
+  private subscriptions = new Map<
+    StateType,
+    Set<StateSubscriptionCallback<any>>
+  >()
   private activeStates = new Set<StateType>()
   private currentState: StateData = {
     transport: null,
@@ -246,6 +264,7 @@ export class StateSubscriptionManager {
 ```
 
 **Type-safe state handling:**
+
 ```typescript
 export type StateSubscriptionCallback<T extends StateType> = (
   state: StateData[T]
@@ -263,6 +282,7 @@ const unsubscribe = Bridge.subscribeToState('transport', (state) => {
 ### Smart Polling
 
 **Adaptive polling based on subscriptions:**
+
 ```typescript
 getPollingCommands(): string[] {
   const commands: string[] = []
@@ -290,6 +310,7 @@ getPollingCommands(): string[] {
 ### Command Builders
 
 **Type-safe command construction:**
+
 ```typescript
 export const REAPER_COMMANDS = {
   // Transport commands
@@ -313,6 +334,7 @@ export const REAPER_COMMANDS = {
 ### Action IDs
 
 **Named constants for Reaper actions:**
+
 ```typescript
 export enum REAPER_ACTIONS {
   PLAY_PAUSE = '40328',
@@ -335,6 +357,7 @@ export enum REAPER_ACTIONS {
 ### Bridge Singleton
 
 **Factory API for all operations:**
+
 ```typescript
 const Bridge = {
   // Configuration
@@ -380,6 +403,7 @@ const Bridge = {
 ### Response Parsing
 
 **Structured response handling:**
+
 ```typescript
 export interface TransportStateResponse {
   isPlaying: boolean
@@ -412,6 +436,7 @@ export interface TrackStateResponse {
 ### Versioning with Beachball
 
 **Automated semantic versioning:**
+
 ```bash
 # Before committing API changes
 yarn change  # Creates change file for versioning
@@ -425,6 +450,7 @@ yarn change  # Creates change file for versioning
 ### Git Hooks
 
 **Quality control automation:**
+
 ```json
 // package.json
 {
@@ -438,6 +464,7 @@ yarn change  # Creates change file for versioning
 ### Build Process
 
 **Dual output with Rollup:**
+
 ```javascript
 // rollup.config.js
 export default {
@@ -446,10 +473,7 @@ export default {
     { file: 'dist/index.esm.js', format: 'esm' },
     { file: 'dist/index.cjs.js', format: 'cjs' },
   ],
-  plugins: [
-    typescript({ declaration: true }),
-    terser(),
-  ],
+  plugins: [typescript({ declaration: true }), terser()],
 }
 ```
 
@@ -460,6 +484,7 @@ export default {
 ### Initialization
 
 **Proper singleton setup:**
+
 ```typescript
 // Configure defaults (optional)
 Bridge.configure({
@@ -473,14 +498,36 @@ Bridge.configure({
 // Initialize singleton
 Bridge.init()
 
-// Verify connection
+// Verify connection (automatic verification starts immediately)
+// Connection status is verified automatically on init
+// Users can check isConnected() immediately, though verification may still be in progress
 console.log('Ready:', Bridge.isReady())
 console.log('Connected:', Bridge.isConnected())
+
+// Optional: Check if initial connection verification is complete
+const api = Bridge.getInstance()
+if (api.isConnectionVerified()) {
+  // Connection verification complete (either connected or failed)
+}
 ```
+
+**Automatic Connection Verification:**
+
+When Bridge initializes, it automatically attempts to verify connectivity with Reaper:
+
+1. **Immediate Test**: Sends a connection test request on `init()`
+2. **Retry Logic**: If connection fails, retries up to `failureThreshold` times
+3. **Interval**: Retries use the configured `pollingInterval` between attempts
+4. **Handles Late Startup**: Works when Reaper starts after the page loads
+5. **Failure Threshold**: After `failureThreshold` failures, stops retrying until refresh
+6. **Initial States**: If successful initial states are retrieved for all subscribable states
+
+This ensures `Bridge.isConnected()` reflects actual connectivity status without requiring manual user interaction.
 
 ### State Subscriptions
 
 **Efficient state management:**
+
 ```typescript
 // Subscribe to transport state
 const unsubscribeTransport = Bridge.subscribeToState('transport', (state) => {
@@ -495,7 +542,7 @@ const unsubscribeTracks = Bridge.subscribeToState('tracks', (tracks) => {
     console.warn('No track data available')
     return
   }
-  tracks.forEach(track => updateTrackUI(track))
+  tracks.forEach((track) => updateTrackUI(track))
 })
 
 // Cleanup
@@ -506,6 +553,7 @@ unsubscribeTracks()
 ### Immediate vs Queued Execution
 
 **Performance optimization:**
+
 ```typescript
 // Immediate for UI responsiveness
 await Bridge.actions.transport.play() // User clicked play button
@@ -522,6 +570,7 @@ await Bridge.queue.flush()
 ### Error Handling
 
 **Robust error management:**
+
 ```typescript
 const connectionId = Bridge.subscribe({
   onConnectionChange: (connected) => {
@@ -546,6 +595,7 @@ Bridge.unsubscribe(connectionId)
 ### Unit Testing
 
 **Test command builders and validation:**
+
 ```typescript
 describe('REAPER_COMMANDS', () => {
   test('TRACK_SET_VOLUME validates range', () => {
@@ -558,6 +608,7 @@ describe('REAPER_COMMANDS', () => {
 ### Integration Testing
 
 **Test with mock Reaper server:**
+
 ```typescript
 describe('Bridge integration', () => {
   let mockServer: MockReaperServer
@@ -603,6 +654,7 @@ docs/
 ## When Writing Code
 
 ### ✅ Do:
+
 - Use TypeScript strict mode with branded types
 - Follow singleton pattern for Bridge instance
 - Implement proper error handling with custom error types
@@ -616,6 +668,7 @@ docs/
 - Follow semantic versioning with change files
 
 ### ❌ Avoid:
+
 - Direct instantiation of ReaperAPI (use Bridge.init())
 - Global state outside the singleton
 - Synchronous operations (everything is async)
