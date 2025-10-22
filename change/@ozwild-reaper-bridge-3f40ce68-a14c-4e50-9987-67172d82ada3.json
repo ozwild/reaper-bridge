@@ -1,0 +1,7 @@
+{
+  "type": "minor",
+  "comment": "Feat: add initial connection verification and initial state retrieval",
+  "packageName": "@ozwild/reaper-bridge",
+  "email": "ozwildgt@outlook.com",
+  "dependentChangeType": "patch"
+}

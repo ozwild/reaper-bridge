@@ -69,6 +69,10 @@ export class ReaperAPI {
   // State subscription manager
   private stateManager = new StateSubscriptionManager()
 
+  // Connection testing on startup
+  private connectionTestTimer: number | null = null
+  private hasInitialConnectionTest = false
+
   constructor(config?: ReaperAPIConfig) {
     if (config) {
       this.init(config)
@@ -96,6 +100,9 @@ export class ReaperAPI {
     }
 
     this.initialized = true
+
+    // Start automatic connection verification on initialization
+    this.startConnectionVerification()
   }
 
   get baseUrl() {
@@ -530,6 +537,11 @@ export class ReaperAPI {
       clearTimeout(this.immediateDebounceTimer)
       this.immediateDebounceTimer = null
     }
+    // Clear connection test timer if active
+    if (this.connectionTestTimer) {
+      clearTimeout(this.connectionTestTimer)
+      this.connectionTestTimer = null
+    }
     // Process any remaining commands in the queue
     void this.processQueue()
   }
@@ -621,6 +633,120 @@ export class ReaperAPI {
    */
   getCurrentState<T extends StateType>(stateType: T) {
     return this.stateManager.getCurrentState(stateType)
+  }
+
+  /**
+   * Start automatic connection verification
+   * Attempts to connect immediately, then retries up to failureThreshold times
+   * This ensures users get accurate connection status on page load
+   * @private
+   */
+  private startConnectionVerification(): void {
+    this.hasInitialConnectionTest = false
+    this.attemptConnectionVerification()
+  }
+
+  /**
+   * Attempt to verify connection and retry on failure
+   * Uses the same failure threshold and interval as polling for consistency
+   * @private
+   */
+  private async attemptConnectionVerification(): Promise<void> {
+    // Clear any existing timer
+    if (this.connectionTestTimer) {
+      clearTimeout(this.connectionTestTimer)
+      this.connectionTestTimer = null
+    }
+
+    // Skip if we've already successfully connected
+    if (this.isConnected) {
+      this.hasInitialConnectionTest = true
+      return
+    }
+
+    // Skip if we've exceeded the failure threshold
+    if (this.consecutiveFailures >= this.failureThreshold) {
+      this.hasInitialConnectionTest = true
+      return
+    }
+
+    try {
+      const isConnected = await this.testConnection()
+
+      if (isConnected) {
+        this.hasInitialConnectionTest = true
+        this.getInitialStateAfterConnection()
+        return
+      }
+
+      // If not connected, increment failures and retry
+      this.consecutiveFailures++
+
+      if (this.consecutiveFailures < this.failureThreshold) {
+        // Schedule next retry using polling interval
+        this.connectionTestTimer = setTimeout(
+          () => this.attemptConnectionVerification(),
+          this.pollingInterval
+        )
+      } else {
+        // Mark initial test as complete when threshold reached
+        this.hasInitialConnectionTest = true
+        this.setConnectionState(false)
+      }
+    } catch (_) {
+      // Error during test, increment failures and retry
+      this.consecutiveFailures++
+
+      if (this.consecutiveFailures < this.failureThreshold) {
+        // Schedule next retry
+        this.connectionTestTimer = setTimeout(
+          () => this.attemptConnectionVerification(),
+          this.pollingInterval
+        )
+      } else {
+        // Mark initial test as complete
+        this.hasInitialConnectionTest = true
+        this.setConnectionState(false)
+      }
+    }
+  }
+
+  /**
+   * Check if initial connection verification has completed
+   * @returns true if verification is complete (connected or failed)
+   */
+  isConnectionVerified(): boolean {
+    return this.hasInitialConnectionTest
+  }
+
+  /** Get an initial state after connection to count with an initial state */
+  async getInitialStateAfterConnection(): Promise<void> {
+    // Trigger an immediate state poll to populate initial states
+    const {
+      TRANSPORT_GET_STATE,
+      TRANSPORT_BEAT,
+      TRACK_LIST,
+      REGION_LIST,
+      MARKER_LIST,
+    } = REAPER_COMMANDS
+
+    const stateCommands = [
+      TRANSPORT_GET_STATE,
+      TRANSPORT_BEAT,
+      TRACK_LIST,
+      REGION_LIST,
+      MARKER_LIST,
+    ]
+
+    try {
+      const combinedCommand = stateCommands.join(COMMAND_SEPARATOR)
+
+      const response = await this.sendCommandDirect(combinedCommand)
+
+      await this.parseAndDistributeStates(response, stateCommands)
+    } catch (error) {
+      ReaperBridgeWarning('Initial state poll error', error as Error)
+    }
   }
 
   async testConnection(): Promise<boolean> {
