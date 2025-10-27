@@ -1,0 +1,7 @@
+{
+  "type": "minor",
+  "comment": "`Volume Utilities`: add functions to aid users converting volume scales",
+  "packageName": "@ozwild/reaper-bridge",
+  "email": "ozwildgt@outlook.com",
+  "dependentChangeType": "patch"
+}

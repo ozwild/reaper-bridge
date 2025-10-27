@@ -1,3 +1,5 @@
+import { VOLUME_INTERPOLATION_POINTS } from './constants.js'
+
 export function validateConnectionSettings(host: string, port: string) {
   const errors: string[] = []
 
@@ -26,55 +28,89 @@ export const formatTime = {
   },
 }
 
-/** Utility to convert linear volume (0.0 - 1.0) to decibels and provide helper methods */
-export function withVolume(volume: number): {
-  decibels: number
-  toString: () => string
-  linearPercent: (minDb?: number, maxDb?: number) => number
-  linearPercentWithCurve: (
-    minDb?: number,
-    maxDb?: number,
-    curve?: number
-  ) => number
-  logarithmicPercent: (minDb?: number, maxDb?: number) => number
-} {
-  let db: number
-  if (volume <= 0) {
-    db = -Infinity // Representing silence
-  }
-  db = 20 * Math.log10(volume)
-  return {
-    decibels: db,
-    toString: (): string => {
-      if (db === -Infinity) {
-        return '-∞ dB'
+/** Volume conversion utilities */
+
+const fromDecibels = (
+  db: number
+): {
+  toFaderScale: () => number
+  toString: (fractionDigits?: number) => string
+  toAmplitude: () => number
+} => ({
+  toString: (fractionDigits = 1): string => {
+    if (db === -Infinity) {
+      return '-∞ dB'
+    }
+    return db.toFixed(fractionDigits) + ' dB'
+  },
+  toAmplitude: () => {
+    return db <= -150 ? 0 : Math.pow(10, db / 20)
+  },
+  toFaderScale: () => {
+    const points = VOLUME_INTERPOLATION_POINTS
+    const clamped = Math.max(-150, Math.min(db, 12))
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i]
+      const p2 = points[i + 1]
+      if (clamped >= p1.db && clamped <= p2.db) {
+        const t = (clamped - p1.db) / (p2.db - p1.db)
+        return p1.percent + t * (p2.percent - p1.percent)
       }
-      return db.toFixed(1) + ' dB'
-    },
-    linearPercent: (minDb = -130, maxDb = 12) => {
-      const clampedDb = Math.max(minDb, Math.min(db, maxDb))
+    }
 
-      const percent = ((clampedDb - minDb) / (maxDb - minDb)) * 100
+    return clamped <= -150 ? 0 : 1
+  },
+})
 
-      return percent
-    },
-    linearPercentWithCurve: (minDb = -130, maxDb = 12, curve = 2.5) => {
-      const clampedDb = Math.max(minDb, Math.min(db, maxDb))
-      const normalized = (clampedDb - minDb) / (maxDb - minDb)
-      const curved = Math.pow(normalized, curve)
-      return curved * 100
-    },
-    logarithmicPercent: (minDb = -130, maxDb = 12) => {
-      // Clamp input
-      const clampedDb = Math.max(minDb, Math.min(db, maxDb))
-
-      // Shift range to positive domain
-      const shifted = clampedDb + Math.abs(minDb)
-
-      // Apply tuned logarithmic curve
-      const percent = Math.pow(shifted / 142, 2.2) * 100
-
-      return Math.max(0, Math.min(percent, 100))
-    },
+const fromAmplitude = (
+  volume: number
+): {
+  toDecibels: () => number
+  toString: () => string
+  toFaderScale: () => number
+} => {
+  const db = volume <= 0 ? -Infinity : 20 * Math.log10(volume)
+  return {
+    toDecibels: () => db,
+    toString: fromDecibels(db).toString,
+    toFaderScale: fromDecibels(db).toFaderScale,
   }
+}
+
+const fromFaderScale = (
+  percent: number
+): {
+  toDecibels: () => number
+  toString: (fractionDigits?: number) => string
+  toAmplitude: () => number
+} => {
+  const db = (() => {
+    const points = VOLUME_INTERPOLATION_POINTS
+
+    const clamped = Math.max(0, Math.min(percent, 1))
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i]
+      const p2 = points[i + 1]
+      if (clamped >= p1.percent && clamped <= p2.percent) {
+        const t = (clamped - p1.percent) / (p2.percent - p1.percent)
+        return p1.db + t * (p2.db - p1.db)
+      }
+    }
+
+    return clamped <= 0 ? -150 : 12
+  })() as number
+
+  return {
+    toDecibels: () => db,
+    toString: fromDecibels(db).toString,
+    toAmplitude: fromDecibels(db).toAmplitude,
+  }
+}
+
+export const volumeUtils = {
+  fromDecibels,
+  fromAmplitude,
+  fromFaderScale,
 }

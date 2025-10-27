@@ -1,15 +1,20 @@
 import { REGULAR_EXPRESSIONS } from './constants.js'
 import { ReaperBridgeError } from './ReaperBridgeError.js'
 
-type Volume = number // 0.0 to 1.0
+/** An amplitude value (0.0 to 1.0) */
+export type Volume = number // 0.0 to 1.0
 
-type Pan = number // -1.0 to 1.0
+/** A pan value (-1.0 to 1.0) */
+export type Pan = number // -1.0 to 1.0
 
-type Delta = number // e.g., +0.1, -0.1
+/** A signed numeric delta value (e.g., +0.1, -0.1) */
+export type Delta = string // e.g., +0.1, -0.1
 
-type DeltaSend = number | string // e.g., +0.1, -0.1, +0.1e, -0.1E
+/** A signed numeric delta value with optional end suffix (e.g., +0.1e, -0.1E) */
+export type DeltaSend = string // e.g., +0.1, -0.1, +0.1e, -0.1E
 
-type Monitoring = 0 | 1 | 2 // 0 cycle, 1 on, 2 auto
+/** A signed numeric monitoring value (0 cycle, 1 on, 2 auto) */
+export type Monitoring = 0 | 1 | 2 // 0 cycle, 1 on, 2 auto
 
 const validate = (
   value: number | string,
@@ -22,13 +27,13 @@ const validate = (
         const match = regex.exec(value)
         if (!match) {
           throw new ReaperBridgeError(
-            'Invalid Volume format. Use a number between 0.0 and 1.0.'
+            'Invalid Volume format. Use a number between 0.0 and 4.0.'
           )
         }
         value = parseFloat(match[1])
       }
-      if (value < 0 || value > 1)
-        throw new ReaperBridgeError('Volume value must be between 0.0 and 1.0')
+      if (value < 0 || value > 4)
+        throw new ReaperBridgeError('Volume value must be between 0.0 and 4.0')
       break
     case 'pan':
       if (typeof value === 'string') {
@@ -45,7 +50,19 @@ const validate = (
         throw new ReaperBridgeError('Pan value must be between -1.0 and 1.0')
       break
     case 'delta':
-      // No specific validation for delta
+      if (typeof value === 'string') {
+        value = value.trim()
+        const regex = REGULAR_EXPRESSIONS.DELTA
+
+        const match = regex.exec(value)
+
+        if (!match) {
+          throw new ReaperBridgeError(
+            'Invalid Delta format. Use a number optionally preceded by "+" or "-".'
+          )
+        }
+      }
+
       break
     case 'deltaSend':
       // Only string cases are when 'e' or 'E' is appended
@@ -129,14 +146,14 @@ export const REAPER_COMMANDS = {
     validate(value, 'volume')
     return `SET/TRACK/${index}/VOL/${value}`
   },
-  TRACK_ADJUST_VOLUME: (index: number, delta: Delta | string) =>
+  TRACK_ADJUST_VOLUME: (index: number, delta: Delta) =>
     `SET/TRACK/${index}/VOL/${delta}`,
 
   TRACK_SET_PAN: (index: number, value: Pan) => {
     validate(value, 'pan')
     return `SET/TRACK/${index}/PAN/${value}`
   },
-  TRACK_ADJUST_PAN: (index: number, delta: Delta | string) =>
+  TRACK_ADJUST_PAN: (index: number, delta: Delta) =>
     `SET/TRACK/${index}/PAN/${delta}`,
 
   TRACK_SET_MUTE: (index: number, state: boolean) =>

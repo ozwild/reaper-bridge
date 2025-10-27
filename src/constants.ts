@@ -23,8 +23,9 @@ export const GET_RESPONSE_NULL_FILTER =
 
 export const REGULAR_EXPRESSIONS = {
   QUOTES: /^"|"$/g, // Matches leading and trailing quotes,
+  DELTA: /^([+-]?\d+(\.\d+)?)$/, // Matches delta values like +0.1e or -0.1E
   DELTA_SEND: /^([+-]?\d+(\.\d+)?)([eE])?$/, // Matches delta send values like +0.1e or -0.1E
-  VOLUME: /^([0]?(\.\d+)?|1(\.0+)?)$/, // Matches volume values between 0.0 and 1.0
+  VOLUME: /^([0]?(\.\d+)?|4(\.0+)?)$/, // Matches volume values between 0.0 and 1.0
   PAN: /^([+-]?(\d+(\.\d+)?))$/, // Matches pan values between -1.0 and 1.0
 }
 
@@ -75,3 +76,13 @@ export enum MONITORING_VALUES {
   MONITORING_ON = 1,
   MONITORING_AUTO = 2,
 }
+
+export const VOLUME_INTERPOLATION_POINTS = [
+  { db: -150, percent: 0.0 },
+  { db: -50, percent: 0.1173 },
+  { db: -30, percent: 0.2495 },
+  { db: -18, percent: 0.3892 },
+  { db: -12, percent: 0.4823 },
+  { db: 6, percent: 0.851 },
+  { db: 12, percent: 1.0 },
+]

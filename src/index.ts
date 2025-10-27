@@ -1,6 +1,6 @@
 import Bridge from './Bridge.js'
 
-import { withVolume } from './helpers.js'
+export { volumeUtils } from './helpers.js'
 
 // Re-export types for consumers
 export type { BridgeConfig, EventHandlers } from './Bridge.js'
@@ -23,7 +23,3 @@ export { REAPER_ACTIONS, REAPER_COMMANDS } from './commands.js'
 
 // Export the main Bridge class
 export { Bridge }
-
-export const utilities = {
-  withVolume,
-}
