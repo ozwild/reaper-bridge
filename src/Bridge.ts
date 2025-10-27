@@ -1,3 +1,5 @@
+import type { Delta, Volume } from './commands.js'
+
 import { ReaperAPI } from './ReaperAPI.js'
 import { REAPER_ACTIONS, REAPER_COMMANDS } from './commands.js'
 import { parseMultiResponse, parseTrackResponse } from './responseParser.js'
@@ -378,15 +380,32 @@ const Bridge = {
         return parseTrackResponse(response)
       },
 
-      async toggleMute(trackNumber: number): Promise<void> {
+      async toggleTrackMute(trackNumber: number): Promise<void> {
         await getInstance().executeCommandImmediate(
           REAPER_COMMANDS.TRACK_TOGGLE_MUTE(trackNumber)
         )
       },
 
-      async toggleSolo(trackNumber: number): Promise<void> {
+      async toggleTrackSolo(trackNumber: number): Promise<void> {
         await getInstance().executeCommandImmediate(
           REAPER_COMMANDS.TRACK_TOGGLE_SOLO(trackNumber)
+        )
+      },
+
+      /** Set the volume of a track to a specific value */
+      async setTrackVolume(trackNumber: number, volume: Volume): Promise<void> {
+        await getInstance().executeCommandImmediate(
+          REAPER_COMMANDS.TRACK_SET_VOLUME(trackNumber, volume)
+        )
+      },
+
+      /** Adjust the volume of a track by a delta value */
+      async adjustTrackVolume(
+        trackNumber: number,
+        delta: Delta
+      ): Promise<void> {
+        await getInstance().executeCommandImmediate(
+          REAPER_COMMANDS.TRACK_ADJUST_VOLUME(trackNumber, delta)
         )
       },
     },
