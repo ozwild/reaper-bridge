@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
+  "react-native": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
@@ -43,6 +44,10 @@
     "url": "https://github.com/ozwild/reaper-bridge/issues"
   },
   "homepage": "https://github.com/ozwild/reaper-bridge#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "dependencies": {},
   "devDependencies": {
     "@babel/core": "^7.23.0",
