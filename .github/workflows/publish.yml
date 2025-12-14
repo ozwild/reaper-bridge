@@ -1,0 +1,77 @@
+name: Publish Package
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./reaper-bridge
+
+      - name: Check for change files
+        id: check_changes
+        run: |
+          if npm run change:check 2>&1; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No change files found, skipping publish"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Change files detected, proceeding with publish"
+          fi
+        working-directory: ./reaper-bridge
+        continue-on-error: true
+
+      - name: Run type checking
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: npm run type-check
+        working-directory: ./reaper-bridge
+
+      - name: Run linting
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: npm run lint
+        working-directory: ./reaper-bridge
+
+      - name: Build package
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: npm run build
+        working-directory: ./reaper-bridge
+
+      - name: Bump version and publish
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: npm run release
+        working-directory: ./reaper-bridge
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Push changes to repository
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git push origin main
